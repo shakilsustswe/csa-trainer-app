@@ -164,3 +164,10 @@ Open `dist/index.html` in a browser to try it.
 Every push to `main` runs [`.github/workflows/pages.yml`](.github/workflows/pages.yml):
 it builds the app, runs the test, and publishes `dist/` to GitHub Pages.
 To publish your own copy: fork this repo, then in **Settings → Pages** set **Source** to **GitHub Actions**.
+
+---
+
+## License
+
+[MIT](LICENSE) — free to use, copy, change and share, as long as the copyright notice stays with it.
+This covers the app code and the built-in sample questions. Questions you import stay in your browser and are not part of this project.
