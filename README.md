@@ -4,7 +4,7 @@ A free, single-page study app for the **ServiceNow Certified System Administrato
 It uses spaced repetition (flashcards that come back when you're about to forget them) plus timed-style quizzes,
 tracks your mistakes, and estimates how ready you are.
 
-**Open the app:** https://shakilsustswe.github.io/csa-trainer/
+**Open the app:** https://shakilsustswe.github.io/csa-trainer-app/
 
 No account, no sign-up, nothing is sent to a server — your progress is saved in your own browser.
 
