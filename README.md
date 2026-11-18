@@ -38,18 +38,71 @@ click **Back up / restore progress** at the bottom of the page, copy the text, a
 
 ---
 
-## Use your own questions
+## Use your own questions (PDF, Excel, Word, anything)
 
-Click **Import your own questions** under the title and choose a `.json` file.
-The file is read **only inside your browser** — it is never uploaded. Each question bank keeps its own progress,
-and you can switch back to the built-in set at any time.
+Have practice questions in a PDF, an Excel sheet, a Word file or a CSV? Every file is laid out differently,
+so the app lets an AI chat do the conversion. It takes about two minutes:
 
-The file is a JSON list of questions:
+1. In the app, click **Import your own questions** (under the title), then **Copy AI prompt**.
+2. Open any AI chat — ChatGPT, Claude, Gemini, Copilot… — paste the prompt, **attach your file**
+   (or paste the questions under the prompt), and send.
+3. For long files the AI answers in parts of 40 questions. Reply **continue** until it says **DONE**.
+4. Copy **everything** the AI sent (all parts, one after another — extra chat text is fine)
+   and paste it into the **Paste the AI's answer** box. Click **Check questions**.
+5. The app shows how many questions it found and lists any with problems (for example, no answer).
+   Ask the AI to fix those, or just click **Import** to load the rest.
+
+Your questions stay **only in your browser** — nothing is uploaded. Each question set keeps its own progress,
+and you can switch back to the built-in set at any time. Importing a new set replaces the previous imported set.
+
+<details>
+<summary><strong>The AI prompt</strong> (the same text the Copy button gives you)</summary>
+
+```text
+Convert the exam questions in my attached file (or the text below) into JSON for a study app.
+
+Output ONLY a JSON array, with no other text before or after it. Each question is one object:
+
+{
+  "type": "single",
+  "question": "Full question text, exactly as written (keep things like \"(Choose two.)\")",
+  "options": [ {"id": "A", "text": "first option"}, {"id": "B", "text": "second option"} ],
+  "correct": ["A"],
+  "explanation": "Explanation from the source, or \"\" if there is none"
+}
+
+Rules:
+1. "type" is "single" when exactly one option is correct, "multi" when two or more are correct.
+2. Option ids are capital letters A, B, C, D, E, F in the order the options appear. If the source uses 1/2/3/4 or a/b/c/d, change them to A/B/C/D, and write "correct" using the same letters.
+3. "correct" is always a list of letters, e.g. ["B"] or ["A", "C", "D"].
+4. A question with no options, where the answer is typed in, uses "type": "text" and "answerText": "the answer" instead of "options" and "correct".
+5. Copy the question, options, answers and explanations exactly. Do not invent, fix or improve anything. If a question has no answer in the source, still include it with "correct": [] (or "answerText": "" for a typed-answer question) so I can see it.
+6. "explanation" gets ALL the explanation text for that question, in order: the reasoning, "why the other options are wrong", notes, tips, references. Leave out question titles/headings and the "Answer: X" line itself. Use \n between paragraphs.
+7. Fix only broken line breaks and page headers/footers that interrupt a question.
+8. Skip anything that is not a question (title pages, tables of contents, ads, glossaries).
+9. Use straight double quotes, and escape any double quote inside text as \".
+10. If there are more than 40 questions, send the first 40 as one JSON array and stop. When I reply "continue", send the next 40 as a new JSON array, and so on until all are done. Then say "DONE".
+
+My questions:
+```
+</details>
+
+**Tips**
+
+- Scanned PDFs (photos of pages) work best with an AI that can read images, such as ChatGPT, Claude or Gemini.
+- If answers are in a separate answer key at the end of the PDF, say so after the prompt:
+  *"The answers are in the answer key on the last pages."*
+- Questions in another language are kept in that language.
+- Always spot-check a few imported questions against your source — AI can make mistakes.
+
+### The JSON format (for people writing it by hand)
+
+A JSON list; each question looks like the examples below.
+`id` is optional (the app numbers questions in order).
 
 ```json
 [
   {
-    "id": "q1",
     "type": "single",
     "question": "Which table stores user accounts?",
     "options": [
@@ -60,7 +113,6 @@ The file is a JSON list of questions:
     "explanation": "User records live in sys_user."
   },
   {
-    "id": "q2",
     "type": "multi",
     "question": "Which tables extend Task? (Choose two.)",
     "options": [
@@ -72,7 +124,6 @@ The file is a JSON list of questions:
     "explanation": "Incident and Problem both extend Task."
   },
   {
-    "id": "q3",
     "type": "text",
     "question": "Name the table that holds every table definition.",
     "answerText": "sys_db_object",
@@ -81,14 +132,11 @@ The file is a JSON list of questions:
 ]
 ```
 
-Rules the importer checks:
-
-- `id` is `q` + a number (`q1`, `q2`, …) and is unique.
-- `type` is `single` (exactly one correct option), `multi` (one or more), or `text` (typed answer in `answerText`).
-- `single` / `multi` need at least 2 `options`, each with an `id` and `text`, and `correct` must use those option ids.
+- `type`: `single` (one correct option), `multi` (two or more) or `text` (typed answer in `answerText`).
+  If it's missing, the app works it out.
+- `single`/`multi` need at least 2 `options`; `correct` lists their letters.
 - `explanation` is optional.
 
-If something is wrong, the app tells you which question and why.
 A complete example is in [`data/sample-questions.json`](data/sample-questions.json).
 
 > Please only import questions you have the right to use, and don't commit copyrighted exam material to a public repository.
@@ -106,7 +154,7 @@ Requirements: Python 3 and Node.js (Node is only needed for the test).
 python build.py                          # build with the sample questions -> dist/index.html
 python build.py --data my-questions.json # build with your own file (keep that build private)
 npm install                              # once, installs jsdom for the test
-npm test                                 # smoke test: every tab + a quiz, with the built-in and an imported bank
+npm test                                 # smoke test (every tab + a quiz) and import tests (messy AI output)
 ```
 
 Open `dist/index.html` in a browser to try it.

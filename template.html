@@ -228,6 +228,132 @@ function validateBank(list){
   return '';
 }
 
+// ---------- Import helpers (AI output is often a bit messy) ----------
+
+// Pulls the question list out of pasted text. Accepts plain JSON, JSON wrapped in
+// ``` fences or surrounded by chat text, {"questions":[...]}, and several arrays
+// pasted one after another (e.g. an AI answered in batches).
+function extractQuestionList(raw){
+  const text = String(raw || '').replace(/^﻿/, '').replace(/```[a-zA-Z]*/g, '').trim();
+  if(!text) throw new Error('Nothing to import — paste the JSON or choose a file first.');
+  const unwrap = v => Array.isArray(v) ? v : (v && Array.isArray(v.questions) ? v.questions : null);
+  try{ const whole = unwrap(JSON.parse(text)); if(whole) return whole; }catch(e){ /* scan below */ }
+  // Collect every top-level [ ... ] block, skipping brackets inside strings.
+  const out = [];
+  let depth = 0, start = -1, inStr = false, esc = false, badBlock = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(inStr){
+      if(esc) esc = false;
+      else if(ch === '\\') esc = true;
+      else if(ch === '"') inStr = false;
+      continue;
+    }
+    if(ch === '"' && depth > 0){ inStr = true; continue; }
+    if(ch === '['){ if(depth === 0) start = i; depth++; }
+    else if(ch === ']' && depth > 0){
+      depth--;
+      if(depth === 0){
+        try{
+          const arr = JSON.parse(text.slice(start, i + 1));
+          if(Array.isArray(arr) && arr.some(x => x && typeof x === 'object')) out.push(...arr);
+        }catch(e){ badBlock = true; }
+      }
+    }
+  }
+  if(out.length) return out;
+  throw new Error(badBlock || depth > 0
+    ? "The JSON looks cut off or broken. Ask the AI to \"continue\" or to send that part again, then paste everything."
+    : "Couldn't find any questions. The text should be a JSON list that starts with [ and ends with ].");
+}
+
+// Cleans up one question: fills in a missing type, accepts "A, C" as the answer,
+// upper-cases letters and trims text. Ids are assigned later.
+function normalizeQuestion(raw){
+  const q = (raw && typeof raw === 'object') ? raw : {};
+  const str = v => (v === undefined || v === null) ? '' : String(v).trim();
+  const out = { question: str(q.question || q.text || q.prompt) };
+  let options = Array.isArray(q.options) ? q.options : [];
+  options = options.map((o, i) => (o && typeof o === 'object')
+    ? { id: str(o.id || o.letter || String.fromCharCode(65 + i)).toUpperCase(), text: str(o.text || o.option || o.value) }
+    : { id: String.fromCharCode(65 + i), text: str(o) });
+  let correct = q.correct !== undefined ? q.correct : (q.answer !== undefined ? q.answer : q.answers);
+  if(typeof correct === 'string') correct = correct.split(/\s*(?:,|;|\/|&|\band\b|\s)\s*/i);
+  correct = Array.isArray(correct) ? correct.map(c => str(c).toUpperCase().replace(/^\(|[.):\]]+$/g, '')).filter(Boolean) : [];
+  // Options numbered 1, 2, 3... -> A, B, C... (and the answer with them)
+  if(options.length && options.every(o => /^\d+$/.test(o.id))){
+    const map = {};
+    options = options.map((o, i) => { const L = String.fromCharCode(65 + i); map[o.id] = L; return { id: L, text: o.text }; });
+    correct = correct.map(c => map[c] || c);
+  }
+  let type = str(q.type).toLowerCase();
+  if(!['single','multi','text'].includes(type)){
+    type = options.length === 0 ? 'text' : (correct.length > 1 ? 'multi' : 'single');
+  }
+  if(type === 'single' && correct.length > 1) type = 'multi';
+  out.type = type;
+  if(type === 'text'){
+    out.answerText = str(q.answerText || q.answer_text || (typeof q.answer === 'string' ? q.answer : '') || (Array.isArray(q.correct) ? q.correct.join(', ') : q.correct));
+  } else {
+    out.options = options;
+    out.correct = correct;
+  }
+  out.explanation = str(q.explanation);
+  return out;
+}
+
+// Plain-language reasons for the import preview.
+function friendlyProblem(reason){
+  if(/answerText/.test(reason) || /at least one option id/.test(reason)) return 'No answer was given for this question.';
+  if(/doesn't exist/.test(reason)) return 'The answer letter doesn\'t match any of the options.';
+  if(/at least 2 "options"/.test(reason)) return 'Fewer than 2 options were found.';
+  if(/"question" text is missing/.test(reason)) return 'The question text is empty.';
+  if(/every option needs/.test(reason)) return 'One of the options is empty or broken.';
+  return reason;
+}
+
+// Turns pasted text into {valid, problems}. Every question is numbered q1, q2, ... in order.
+function prepareImport(raw){
+  const list = extractQuestionList(raw).map(normalizeQuestion);
+  const valid = [], problems = [];
+  list.forEach((q, i) => {
+    q.id = 'q' + (i + 1);
+    const err = validateBank([q]);
+    if(err) problems.push({ n: i + 1, question: q.question, reason: friendlyProblem(err.replace(/^q\d+: |^Question #1:? ?/, '')) });
+    else valid.push(q);
+  });
+  valid.forEach((q, i) => { q.id = 'q' + (i + 1); }); // close gaps left by skipped questions
+  return { total: list.length, valid, problems };
+}
+
+// Copy-paste prompt for ChatGPT, Claude, Gemini, Copilot, etc.
+const AI_PROMPT = `Convert the exam questions in my attached file (or the text below) into JSON for a study app.
+
+Output ONLY a JSON array, with no other text before or after it. Each question is one object:
+
+{
+  "type": "single",
+  "question": "Full question text, exactly as written (keep things like \\"(Choose two.)\\")",
+  "options": [ {"id": "A", "text": "first option"}, {"id": "B", "text": "second option"} ],
+  "correct": ["A"],
+  "explanation": "Explanation from the source, or \\"\\" if there is none"
+}
+
+Rules:
+1. "type" is "single" when exactly one option is correct, "multi" when two or more are correct.
+2. Option ids are capital letters A, B, C, D, E, F in the order the options appear. If the source uses 1/2/3/4 or a/b/c/d, change them to A/B/C/D, and write "correct" using the same letters.
+3. "correct" is always a list of letters, e.g. ["B"] or ["A", "C", "D"].
+4. A question with no options, where the answer is typed in, uses "type": "text" and "answerText": "the answer" instead of "options" and "correct".
+5. Copy the question, options, answers and explanations exactly. Do not invent, fix or improve anything. If a question has no answer in the source, still include it with "correct": [] (or "answerText": "" for a typed-answer question) so I can see it.
+6. "explanation" gets ALL the explanation text for that question, in order: the reasoning, "why the other options are wrong", notes, tips, references. Leave out question titles/headings and the "Answer: X" line itself. Use \\n between paragraphs.
+7. Fix only broken line breaks and page headers/footers that interrupt a question.
+8. Skip anything that is not a question (title pages, tables of contents, ads, glossaries).
+9. Use straight double quotes, and escape any double quote inside text as \\".
+10. If there are more than 40 questions, send the first 40 as one JSON array and stop. When I reply "continue", send the next 40 as a new JSON array, and so on until all are done. Then say "DONE".
+
+My questions:
+`;
+
 // Picks the active question bank before progress is loaded.
 async function loadBank(){
   try{
@@ -483,45 +609,127 @@ function renderInner(){
 
 function drawBankPanel(panel){
   const usingCustom = activeBank === 'custom';
+  const box = 'width:100%;background:var(--panel-raised);border:1px solid var(--line);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px;';
   panel.innerHTML = `
     <div class="card">
-      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px;">Use your own question bank</div>
-      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.6;margin-bottom:10px;">
-        Pick a <code>.json</code> file with your questions. It stays in this browser only &mdash; nothing is uploaded.
-        Each question bank keeps its own progress, so switching back and forth loses nothing.
-        See the README on GitHub for the file format.
+      <div style="font-size:14.5px;font-weight:600;margin-bottom:4px;">Use your own questions</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.6;margin-bottom:14px;">
+        Your questions stay in this browser only &mdash; nothing is uploaded.
+        Each question set keeps its own progress. Importing again replaces your previous imported set and its progress.
       </div>
-      <input type="file" id="bank-file" accept=".json,application/json" style="width:100%;margin-bottom:10px;color:var(--text-dim);font-size:12.5px;">
-      ${usingCustom ? `
+
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Step 1 &middot; Convert your file with AI</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.6;margin-bottom:8px;">
+        Questions in a PDF, Excel, Word, CSV or any other file? Open any AI chat (ChatGPT, Claude, Gemini, Copilot&hellip;),
+        paste this prompt, attach your file (or paste your questions under the prompt) and send.
+        For long files the AI answers in parts &mdash; reply <strong>continue</strong> until it says DONE.
+      </div>
+      <div class="btnrow" style="margin-top:0;margin-bottom:6px;">
+        <button class="primary" id="bank-copy-prompt" style="flex:1;">Copy AI prompt</button>
+      </div>
+      <details style="margin-bottom:16px;">
+        <summary style="cursor:pointer;color:var(--text-dim);font-size:12.5px;">Show the prompt</summary>
+        <textarea id="bank-prompt" readonly style="${box}height:200px;margin-top:8px;">${escapeHtml(AI_PROMPT)}</textarea>
+      </details>
+
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Step 2 &middot; Paste the AI's answer</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.6;margin-bottom:8px;">
+        Copy everything the AI sent. If it answered in several parts, paste all of them here, one after another.
+      </div>
+      <textarea id="bank-paste" placeholder='[ { "type": "single", "question": "...", ... } ]' style="${box}height:140px;margin-bottom:8px;"></textarea>
+      <div style="color:var(--text-dim);font-size:12px;margin-bottom:8px;">&hellip;or choose a saved <code>.json</code> file:
+        <input type="file" id="bank-file" accept=".json,.txt,application/json,text/plain" style="width:100%;margin-top:6px;color:var(--text-dim);font-size:12.5px;">
+      </div>
       <div class="btnrow" style="margin-top:0;">
+        <button class="primary" id="bank-check" style="flex:1;">Check questions</button>
+      </div>
+      <div id="bank-msg" style="font-size:12.5px;margin-top:10px;"></div>
+      <div id="bank-preview"></div>
+
+      ${usingCustom ? `
+      <div class="btnrow" style="margin-top:16px;">
         <button id="bank-builtin" style="flex:1;">Switch back to the built-in sample set</button>
       </div>` : ''}
-      <div id="bank-msg" style="font-size:12.5px;margin-top:8px;"></div>
     </div>
   `;
   const msg = document.getElementById('bank-msg');
+  const preview = document.getElementById('bank-preview');
+  const paste = document.getElementById('bank-paste');
+  let importName = 'Imported questions';
+
+  document.getElementById('bank-copy-prompt').addEventListener('click', async () => {
+    const ta = document.getElementById('bank-prompt');
+    try{
+      await navigator.clipboard.writeText(AI_PROMPT);
+      msg.innerHTML = `<span style="color:var(--good);">Prompt copied. Paste it into your AI chat and attach your file.</span>`;
+    }catch(e){
+      ta.closest('details').open = true; ta.select();
+      msg.innerHTML = `<span style="color:var(--text-dim);">Couldn't copy automatically &mdash; the prompt is selected below, press Ctrl+C (Cmd+C on Mac).</span>`;
+    }
+  });
+
   document.getElementById('bank-file').addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if(!file) return;
+    if(/\.(pdf|xlsx?|csv|docx?|pptx?)$/i.test(file.name)){
+      msg.innerHTML = `<span style="color:var(--bad);">This box needs the JSON the AI made. Use Step 1 first: give this file to an AI chat with the prompt, then paste its answer here.</span>`;
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = async () => {
-      let list;
-      try{ list = JSON.parse(reader.result); }
-      catch(err){ msg.innerHTML = `<span style="color:var(--bad);">That file isn't valid JSON.</span>`; return; }
-      const problem = validateBank(list);
-      if(problem){ msg.innerHTML = `<span style="color:var(--bad);">${escapeHtml(problem)}</span>`; return; }
-      try{
-        const name = file.name.replace(/\.json$/i, '');
-        await storageSet('custom-bank', JSON.stringify({ name, questions: list }));
-        await storageSet('active-bank', 'custom');
-        msg.innerHTML = `<span style="color:var(--good);">Imported ${list.length} questions. Reloading…</span>`;
-        setTimeout(() => location.reload(), 500);
-      }catch(err){
-        msg.innerHTML = `<span style="color:var(--bad);">Couldn't save the file in this browser (it may be too large or storage is blocked).</span>`;
-      }
+    reader.onload = () => {
+      paste.value = reader.result;
+      importName = file.name.replace(/\.(json|txt)$/i, '');
+      checkNow();
     };
     reader.readAsText(file);
   });
+
+  function checkNow(){
+    preview.innerHTML = '';
+    let result;
+    try{ result = prepareImport(paste.value); }
+    catch(e){ msg.innerHTML = `<span style="color:var(--bad);">${escapeHtml(e.message)}</span>`; return; }
+    const { total, valid, problems } = result;
+    msg.innerHTML = problems.length
+      ? `<span style="color:var(--warn);">Found ${total} questions: ${valid.length} ready, ${problems.length} with problems (these will be skipped).</span>`
+      : `<span style="color:var(--good);">Found ${total} questions &mdash; all ready to import.</span>`;
+    const shown = problems.slice(0, 50);
+    preview.innerHTML = `
+      ${problems.length ? `
+      <div style="max-height:220px;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;">
+        ${shown.map(p => `<div style="margin-bottom:6px;"><strong>#${p.n}</strong> ${escapeHtml(truncate(p.question || '(no question text)', 70))}<br><span style="color:var(--bad);">${escapeHtml(p.reason)}</span></div>`).join('')}
+        ${problems.length > shown.length ? `<div style="color:var(--text-dim);">&hellip;and ${problems.length - shown.length} more.</div>` : ''}
+      </div>
+      <div style="color:var(--text-dim);font-size:12px;margin-top:6px;">Tip: ask the AI to fix these (for example "question #${problems[0].n} has no answer, please check it"), then paste again &mdash; or import the rest now.</div>` : ''}
+      ${valid.length ? `
+      <div style="font-size:12.5px;margin-top:12px;">Name this set:
+        <input type="text" id="bank-name" value="${escapeHtml(importName)}" style="width:100%;margin-top:4px;padding:7px 8px;background:var(--panel-raised);border:1px solid var(--line);border-radius:6px;color:var(--text);">
+      </div>
+      <div class="btnrow">
+        <button class="primary" id="bank-import" style="flex:1;">Import ${valid.length} question${valid.length === 1 ? '' : 's'}</button>
+      </div>` : ''}
+    `;
+    if(!valid.length) return;
+    document.getElementById('bank-import').addEventListener('click', async () => {
+      const name = document.getElementById('bank-name').value.trim() || 'Imported questions';
+      try{
+        await storageSet('custom-bank', JSON.stringify({ name, questions: valid }));
+        // A new imported set starts with fresh progress.
+        for(const k of ['srs-state', 'mistakes-state', 'wrong-history-state', 'answer-overrides']){
+          await storageSet('custom-' + k, '{}');
+        }
+        await storageSet('active-bank', 'custom');
+        msg.innerHTML = `<span style="color:var(--good);">Imported ${valid.length} questions. Reloading…</span>`;
+        preview.innerHTML = '';
+        setTimeout(() => location.reload(), 500);
+      }catch(err){
+        msg.innerHTML = `<span style="color:var(--bad);">Couldn't save in this browser (the set may be too large, or storage is blocked).</span>`;
+      }
+    });
+  }
+  document.getElementById('bank-check').addEventListener('click', checkNow);
+
   if(usingCustom){
     document.getElementById('bank-builtin').addEventListener('click', async () => {
       await storageSet('active-bank', 'builtin');
