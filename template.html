@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSA Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12181f;
+    --panel: #1a222b;
+    --panel-raised: #212b36;
+    --line: #2b3642;
+    --text: #e7edf2;
+    --text-dim: #8fa1ae;
+    --accent: #4fd1c5;
+    --accent-dim: #2d6b66;
+    --warn: #f0a857;
+    --bad: #e2685f;
+    --good: #6fce8a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);height:100%;}
+  #app{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
+
+  .brand{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .brand-mark{font-family:var(--mono);font-size:13px;letter-spacing:.08em;color:var(--accent);background:rgba(79,209,197,.1);border:1px solid var(--accent-dim);padding:2px 7px;border-radius:4px;}
+  h1{font-size:21px;margin:0;font-weight:600;}
+  .sub{color:var(--text-dim);font-size:13.5px;margin:4px 0 18px;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:18px;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 4px;text-align:center;}
+  .stat .n{font-family:var(--mono);font-size:18px;font-weight:600;line-height:1.1;}
+  .stat .l{font-size:9.5px;color:var(--text-dim);margin-top:3px;text-transform:uppercase;letter-spacing:.05em;}
+  .stat.new .n{color:var(--text);}
+  .stat.due .n{color:var(--warn);}
+  .stat.learning .n{color:var(--accent);}
+  .stat.mastered .n{color:var(--good);}
+  .stat.mistakes .n{color:var(--bad);}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .tab{flex:1;padding:9px 2px;text-align:center;font-size:11px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--sans);}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .qid{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);letter-spacing:.05em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .box-pill{font-family:var(--mono);font-size:10.5px;padding:2px 6px;border-radius:4px;border:1px solid var(--line);}
+  .qtext{font-size:16px;line-height:1.5;white-space:pre-wrap;margin-bottom:16px;}
+
+  .opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;font-size:14.5px;line-height:1.4;transition:border-color .12s, background .12s;}
+  .opt:hover{border-color:var(--accent-dim);}
+  .opt .tag{font-family:var(--mono);font-size:12px;color:var(--text-dim);min-width:16px;}
+  .opt.selected{border-color:var(--accent);background:rgba(79,209,197,.07);}
+  .opt.correct{border-color:var(--good);background:rgba(111,206,138,.1);}
+  .opt.incorrect{border-color:var(--bad);background:rgba(226,104,95,.1);}
+  .opt.disabled{cursor:default;}
+
+  input.text-answer{width:100%;padding:10px 12px;background:var(--panel-raised);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:14.5px;font-family:var(--sans);margin-bottom:10px;}
+  input.text-answer:focus{outline:none;border-color:var(--accent);}
+
+  .btnrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  button{font-family:var(--sans);font-size:13.5px;border-radius:8px;padding:10px 14px;cursor:pointer;border:1px solid var(--line);background:var(--panel-raised);color:var(--text);transition:border-color .12s, background .12s;}
+  button:hover{border-color:var(--accent-dim);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#0d1116;font-weight:600;}
+  button.primary:hover{opacity:.92;}
+  button.ghost{background:none;}
+  button:disabled{opacity:.4;cursor:default;}
+  button.good{background:var(--good);border-color:var(--good);color:#0d1116;font-weight:600;}
+  button.bad{background:var(--bad);border-color:var(--bad);color:#26100e;font-weight:600;}
+
+  .explain{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.55;color:#c9d3da;white-space:pre-wrap;}
+  .explain .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--text-dim);text-transform:uppercase;display:block;margin-bottom:6px;}
+  .no-explain{color:var(--text-dim);font-style:italic;}
+
+  .setup-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .setup-row button{flex:1;min-width:120px;}
+  .setup-row button.active{border-color:var(--accent);color:var(--accent);}
+
+  .progress-bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:14px;}
+  .progress-fill{height:100%;background:var(--accent);transition:width .2s;}
+
+  .empty{text-align:center;padding:40px 12px;color:var(--text-dim);}
+  .empty .big{font-size:32px;margin-bottom:8px;}
+
+  .score-big{font-family:var(--mono);font-size:44px;font-weight:600;text-align:center;margin:8px 0 4px;}
+  .score-sub{text-align:center;color:var(--text-dim);font-size:13.5px;margin-bottom:18px;}
+
+  .review-item{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .review-item:last-child{border-bottom:none;}
+  .review-item .rq{margin-bottom:4px;}
+  .review-item .ra{color:var(--text-dim);font-size:12.5px;}
+  .ok-mark{color:var(--good);}
+  .bad-mark{color:var(--bad);}
+
+  .range-inputs{display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:13px;color:var(--text-dim);}
+  .range-inputs input{width:70px;padding:7px 8px;background:var(--panel-raised);border:1px solid var(--line);border-radius:6px;color:var(--text);font-family:var(--mono);}
+
+  select{font-family:var(--sans);background:var(--panel-raised);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;}
+
+  .footer-note{color:var(--text-dim);font-size:11.5px;text-align:center;margin-top:28px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// Built-in question bank (injected by build.py). A user can import their own bank
+// from a JSON file; it is kept only in their browser and never uploaded anywhere.
+const BUILTIN_DATA = __DATA_JSON__;
+let DATA = BUILTIN_DATA;
+let TOTAL = DATA.length;
+let activeBank = 'builtin'; // 'builtin' | 'custom'
+let customBankName = '';
+const DAY = 24*60*60*1000;
+const INTERVALS = [0, 1*DAY, 2*DAY, 4*DAY, 9*DAY, 20*DAY]; // box 0..5, box index = ms before due after leaving that box
+
+let srs = {};       // qid -> {box, due, seen, correct}
+let mistakes = {};  // qid -> {streak, lastWrong} — active correction list, cleared after REQUIRED_STREAK correct in a row
+let wrongHistory = {}; // qid -> total times ever answered wrong (never cleared automatically)
+let mistakesView = 'active'; // 'active' | 'hard'
+const REQUIRED_STREAK = 5;   // correct answers in a row needed to clear an active mistake
+const HARD_THRESHOLD = 3;    // total wrong answers before a question is flagged as permanently "hard"
+let quizSession = null; // {ids, idx, answers:{idx:{selection,correct}}, results, done}
+let studyQueue = [];
+let studyIdx = 0;
+let studyAnswers = {}; // idx -> {gotIt, revealed:true} for cards already graded this session
+let currentAnswered = false;
+let currentSelection = [];
+let overrides = {}; // qid -> {correct:[...ids]} or {answerText:'...'} — user-submitted answer corrections
+
+function setStudyQueue(arr){ studyQueue = arr; studyIdx = 0; studyAnswers = {}; }
+function startQuizSession(ids){ quizSession = { ids, idx: 0, results: [], answers: {}, done: false }; }
+
+function byId(id){ return DATA.find(d => d.id === id); }
+
+function getCorrectIds(q){
+  const o = overrides[q.id];
+  return (o && o.correct) ? o.correct : q.correct;
+}
+function getCorrectText(q){
+  const o = overrides[q.id];
+  return (o && o.answerText !== undefined) ? o.answerText : q.answerText;
+}
+function isOverridden(qid){ return !!overrides[qid]; }
+
+function defaultState(){ return { box: 0, due: 0, seen: 0, correct: 0 }; }
+
+function getState(qid){
+  if(!srs[qid]) srs[qid] = defaultState();
+  return srs[qid];
+}
+
+// ---------- Storage abstraction ----------
+// window.storage only exists inside Claude.ai's artifact viewer. When this file is
+// opened directly (double-clicked, file:// URL), that API is undefined — so we fall
+// back to plain browser localStorage, which works fine for a local file opened
+// repeatedly in the same browser.
+const LS_PREFIX = 'csa_trainer_';
+
+function hasArtifactStorage(){
+  return typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+}
+
+async function storageGet(key){
+  if(hasArtifactStorage()){
+    return await window.storage.get(key, false);
+  }
+  try{
+    const v = window.localStorage.getItem(LS_PREFIX + key);
+    return v !== null ? { key, value: v, shared: false } : null;
+  }catch(e){
+    throw e; // localStorage blocked (e.g. some strict private-browsing modes)
+  }
+}
+
+async function storageSet(key, value){
+  if(hasArtifactStorage()){
+    return await window.storage.set(key, value, false);
+  }
+  window.localStorage.setItem(LS_PREFIX + key, value);
+  return { key, value, shared: false };
+}
+
+// Races any storage call against a timeout so a hung/unresponsive storage backend
+// can never leave the whole app stuck on the loading screen.
+function withTimeout(promise, ms, fallback){
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve(fallback), ms))
+  ]);
+}
+
+let storageAvailable = true;
+
+// Progress is stored separately per question bank, so the sample set and an
+// imported set (which may reuse ids like "q1") never mix their progress.
+function bankKey(k){ return activeBank === 'custom' ? 'custom-' + k : k; }
+
+// Checks an imported question list and returns an error message, or '' if it's valid.
+function validateBank(list){
+  if(!Array.isArray(list)) return 'The file must contain a JSON list ([ ... ]) of questions.';
+  if(list.length === 0) return 'The file has no questions in it.';
+  const seen = new Set();
+  for(let i = 0; i < list.length; i++){
+    const q = list[i], where = `Question #${i+1}`;
+    if(!q || typeof q !== 'object') return `${where} is not an object.`;
+    if(typeof q.id !== 'string' || !/^q\d+$/.test(q.id)) return `${where}: "id" must look like "q1", "q2", ...`;
+    if(seen.has(q.id)) return `${where}: id "${q.id}" is used twice.`;
+    seen.add(q.id);
+    if(typeof q.question !== 'string' || !q.question.trim()) return `${q.id}: "question" text is missing.`;
+    if(!['single','multi','text'].includes(q.type)) return `${q.id}: "type" must be "single", "multi" or "text".`;
+    if(q.type === 'text'){
+      if(typeof q.answerText !== 'string' || !q.answerText.trim()) return `${q.id}: text questions need "answerText".`;
+    } else {
+      if(!Array.isArray(q.options) || q.options.length < 2) return `${q.id}: needs at least 2 "options".`;
+      const optIds = q.options.map(o => o && o.id);
+      if(q.options.some(o => !o || typeof o.id !== 'string' || typeof o.text !== 'string')) return `${q.id}: every option needs "id" and "text".`;
+      if(!Array.isArray(q.correct) || q.correct.length === 0) return `${q.id}: "correct" must list at least one option id.`;
+      if(q.correct.some(c => !optIds.includes(c))) return `${q.id}: "correct" names an option that doesn't exist.`;
+      if(q.type === 'single' && q.correct.length !== 1) return `${q.id}: a "single" question must have exactly one correct option.`;
+    }
+  }
+  return '';
+}
+
+// Picks the active question bank before progress is loaded.
+async function loadBank(){
+  try{
+    const which = await withTimeout(storageGet('active-bank'), 4000, null);
+    if(!which || which.value !== 'custom') return;
+    const res = await withTimeout(storageGet('custom-bank'), 4000, null);
+    const parsed = res && res.value ? JSON.parse(res.value) : null;
+    if(!parsed || validateBank(parsed.questions)) return; // fall back to the built-in set
+    DATA = parsed.questions;
+    TOTAL = DATA.length;
+    customBankName = parsed.name || 'Imported questions';
+    activeBank = 'custom';
+  }catch(e){ /* keep the built-in set */ }
+}
+
+async function loadSRS(){
+  // Quick sanity check that *some* storage mechanism exists at all.
+  try{
+    window.localStorage.setItem(LS_PREFIX + '__probe', '1');
+    window.localStorage.removeItem(LS_PREFIX + '__probe');
+    storageAvailable = true;
+  }catch(e){
+    storageAvailable = hasArtifactStorage(); // localStorage blocked; artifact storage may still work
+  }
+  try{
+    const res = await withTimeout(storageGet(bankKey('srs-state')), 4000, null);
+    srs = res && res.value ? JSON.parse(res.value) : {};
+  }catch(e){ srs = {}; }
+  try{
+    const res2 = await withTimeout(storageGet(bankKey('mistakes-state')), 4000, null);
+    const raw = res2 && res2.value ? JSON.parse(res2.value) : {};
+    // migrate old format (qid -> timestamp) to new shape (qid -> {streak, lastWrong})
+    mistakes = {};
+    for(const k in raw){
+      mistakes[k] = (typeof raw[k] === 'number') ? { streak: 0, lastWrong: raw[k] } : raw[k];
+    }
+  }catch(e){ mistakes = {}; }
+  try{
+    const res3 = await withTimeout(storageGet(bankKey('wrong-history-state')), 4000, null);
+    wrongHistory = res3 && res3.value ? JSON.parse(res3.value) : {};
+  }catch(e){ wrongHistory = {}; }
+  try{
+    const res4 = await withTimeout(storageGet(bankKey('answer-overrides')), 4000, null);
+    overrides = res4 && res4.value ? JSON.parse(res4.value) : {};
+  }catch(e){ overrides = {}; }
+}
+
+let saveTimer = null;
+let saveFailed = false;
+function saveSRS(immediate){
+  clearTimeout(saveTimer);
+  const doSave = async () => {
+    try{
+      await storageSet(bankKey('srs-state'), JSON.stringify(srs));
+      await storageSet(bankKey('mistakes-state'), JSON.stringify(mistakes));
+      await storageSet(bankKey('wrong-history-state'), JSON.stringify(wrongHistory));
+      await storageSet(bankKey('answer-overrides'), JSON.stringify(overrides));
+      saveFailed = false;
+    }catch(e){
+      console.error('save failed', e);
+      saveFailed = true;
+      flagSaveIssue();
+    }
+  };
+  if(immediate){ doSave(); } else { saveTimer = setTimeout(doSave, 250); }
+}
+
+function flagSaveIssue(){
+  const el = document.getElementById('save-warning');
+  if(el) el.style.display = 'block';
+}
+
+// Save immediately (bypassing the debounce) if the tab is hidden/closed so a
+// quick close right after answering a question doesn't lose that last update.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') saveSRS(true);
+});
+window.addEventListener('pagehide', () => saveSRS(true));
+
+function mistakeCount(){ return Object.keys(mistakes).length; }
+function hardIds(){ return Object.keys(wrongHistory).filter(id => wrongHistory[id] >= HARD_THRESHOLD); }
+function hardCount(){ return hardIds().length; }
+
+function classify(qid){
+  const s = srs[qid];
+  if(!s || s.seen === 0) return 'new';
+  if(s.box >= 5) return 'mastered';
+  if(Date.now() >= s.due) return 'due';
+  return 'learning';
+}
+
+function computeStats(){
+  let n=0,due=0,learning=0,mastered=0;
+  for(const q of DATA){
+    const c = classify(q.id);
+    if(c==='new') n++;
+    else if(c==='due') due++;
+    else if(c==='learning') learning++;
+    else if(c==='mastered') mastered++;
+  }
+  return {n, due, learning, mastered};
+}
+
+const BOX_PROB = [0.35, 0.55, 0.70, 0.82, 0.90, 0.97]; // estimated chance of getting a question right, by box level
+
+function estimatedProb(q){
+  const s = srs[q.id];
+  if(!s || s.seen === 0){
+    // never studied yet — credit only what blind guessing would realistically earn
+    if(q.type === 'text') return 0.05;
+    if(q.type === 'multi') return 0.12;
+    return Math.max(0.15, Math.min(0.30, 1/q.options.length));
+  }
+  const boxProb = BOX_PROB[Math.min(s.box, BOX_PROB.length-1)];
+  const personal = s.seen > 0 ? s.correct/s.seen : boxProb;
+  return 0.6*boxProb + 0.4*personal;
+}
+
+function computeReadiness(){
+  let totalProb = 0, totalSeen = 0, totalAttempts = 0, totalCorrectAttempts = 0;
+  for(const q of DATA){
+    totalProb += estimatedProb(q);
+    const s = srs[q.id];
+    if(s && s.seen > 0){
+      totalSeen++;
+      totalAttempts += s.seen;
+      totalCorrectAttempts += s.correct;
+    }
+  }
+  const avgPct = Math.round((totalProb / TOTAL) * 100);
+  const estCorrect = Math.round((totalProb / TOTAL) * TOTAL);
+  const realAccuracy = totalAttempts > 0 ? Math.round((totalCorrectAttempts/totalAttempts)*100) : null;
+  return { avgPct, estCorrect, totalSeen, realAccuracy };
+}
+
+function recordResult(qid, gotIt){
+  const s = getState(qid);
+  s.seen++;
+  if(gotIt){
+    s.correct++;
+    s.box = Math.min(s.box+1, 5);
+    s.due = Date.now() + INTERVALS[Math.min(s.box, INTERVALS.length-1)];
+    if(mistakes[qid]){
+      mistakes[qid].streak = (mistakes[qid].streak||0) + 1;
+      if(mistakes[qid].streak >= REQUIRED_STREAK) delete mistakes[qid];
+    }
+  } else {
+    s.box = 0;
+    s.due = Date.now(); // immediately due again
+    wrongHistory[qid] = (wrongHistory[qid]||0) + 1;
+    mistakes[qid] = { streak: 0, lastWrong: Date.now() };
+  }
+  saveSRS();
+}
+
+// ---------- Rendering shell ----------
+
+let activeTab = 'overview';
+
+function render(){
+  try{
+    renderInner();
+  }catch(e){
+    console.error('render failed', e);
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="card" style="border-color:var(--bad);">
+        <div style="font-size:14.5px;font-weight:600;color:var(--bad);margin-bottom:8px;">Something went wrong rendering this screen.</div>
+        <div style="color:var(--text-dim);font-size:13px;margin-bottom:14px;">Your saved progress itself should be fine. Try going back to Overview, or reset if this keeps happening.</div>
+        <div class="btnrow">
+          <button class="primary" id="err-overview" style="flex:1;">Back to Overview</button>
+          <button id="err-reset" style="flex:1;">Reset all progress</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('err-overview').addEventListener('click', () => {
+      activeTab = 'overview'; studyQueue = []; studyIdx = 0; quizSession = null;
+      render();
+    });
+    document.getElementById('err-reset').addEventListener('click', () => {
+      srs = {}; mistakes = {}; wrongHistory = {};
+      saveSRS(true);
+      activeTab = 'overview'; studyQueue = []; studyIdx = 0; quizSession = null; browseExpanded = null;
+      render();
+    });
+  }
+}
+
+function renderInner(){
+  const stats = computeStats();
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="brand"><span class="brand-mark">CSA · V18.95</span></div>
+    <h1>ServiceNow CSA Trainer</h1>
+    <div class="sub">${TOTAL} questions &middot; ${activeBank === 'custom' ? escapeHtml(customBankName) : 'built-in sample set'} &middot; spaced-repetition study + quiz mode
+      &middot; <a href="#" id="bank-toggle" style="color:var(--accent);">${activeBank === 'custom' ? 'Change question bank' : 'Import your own questions'}</a></div>
+    <div id="bank-panel" style="display:none;margin-bottom:16px;"></div>
+
+    <div class="stat-row">
+      <div class="stat new"><div class="n">${stats.n}</div><div class="l">New</div></div>
+      <div class="stat due"><div class="n">${stats.due}</div><div class="l">Due</div></div>
+      <div class="stat learning"><div class="n">${stats.learning}</div><div class="l">Learning</div></div>
+      <div class="stat mastered"><div class="n">${stats.mastered}</div><div class="l">Mastered</div></div>
+      <div class="stat mistakes"><div class="n">${mistakeCount()}</div><div class="l">Mistakes</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${activeTab==='overview'?'active':''}" data-tab="overview">Overview</button>
+      <button class="tab ${activeTab==='study'?'active':''}" data-tab="study">Study</button>
+      <button class="tab ${activeTab==='quiz'?'active':''}" data-tab="quiz">Quiz</button>
+      <button class="tab ${activeTab==='mistakes'?'active':''}" data-tab="mistakes">Mistakes</button>
+      <button class="tab ${activeTab==='browse'?'active':''}" data-tab="browse">Browse</button>
+      <button class="tab ${activeTab==='fixes'?'active':''}" data-tab="fixes">Fixes${Object.keys(overrides).length ? ' ('+Object.keys(overrides).length+')' : ''}</button>
+    </div>
+
+    <div id="view-root"></div>
+    <div id="save-warning" style="display:${storageAvailable?'none':'block'};background:rgba(226,104,95,.12);border:1px solid var(--bad);color:var(--bad);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-top:16px;">
+      Couldn't save to this device's storage. Use "Back up progress" below so you don't lose it.
+    </div>
+    <div class="footer-note">
+      <a href="#" id="backup-toggle" style="color:var(--text-dim);">Back up / restore progress</a><br>
+      Progress is saved automatically on this device.
+    </div>
+    <div id="backup-panel" style="display:none;margin-top:12px;"></div>
+  `;
+  app.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+    activeTab = b.dataset.tab;
+    if(activeTab === 'study'){ setStudyQueue([]); }
+    if(activeTab === 'quiz'){ quizSession = null; }
+    render();
+  }));
+  document.getElementById('backup-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    const panel = document.getElementById('backup-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if(panel.style.display === 'block') drawBackupPanel(panel);
+  });
+  document.getElementById('bank-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    const panel = document.getElementById('bank-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if(panel.style.display === 'block') drawBankPanel(panel);
+  });
+
+  const root = document.getElementById('view-root');
+  if(activeTab === 'overview') renderOverview(root);
+  else if(activeTab === 'study') renderStudySetup(root);
+  else if(activeTab === 'quiz') renderQuizSetup(root);
+  else if(activeTab === 'mistakes') renderMistakesTab(root);
+  else if(activeTab === 'fixes') renderFixesTab(root);
+  else renderBrowse(root);
+}
+
+function drawBankPanel(panel){
+  const usingCustom = activeBank === 'custom';
+  panel.innerHTML = `
+    <div class="card">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px;">Use your own question bank</div>
+      <div style="color:var(--text-dim);font-size:12.5px;line-height:1.6;margin-bottom:10px;">
+        Pick a <code>.json</code> file with your questions. It stays in this browser only &mdash; nothing is uploaded.
+        Each question bank keeps its own progress, so switching back and forth loses nothing.
+        See the README on GitHub for the file format.
+      </div>
+      <input type="file" id="bank-file" accept=".json,application/json" style="width:100%;margin-bottom:10px;color:var(--text-dim);font-size:12.5px;">
+      ${usingCustom ? `
+      <div class="btnrow" style="margin-top:0;">
+        <button id="bank-builtin" style="flex:1;">Switch back to the built-in sample set</button>
+      </div>` : ''}
+      <div id="bank-msg" style="font-size:12.5px;margin-top:8px;"></div>
+    </div>
+  `;
+  const msg = document.getElementById('bank-msg');
+  document.getElementById('bank-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let list;
+      try{ list = JSON.parse(reader.result); }
+      catch(err){ msg.innerHTML = `<span style="color:var(--bad);">That file isn't valid JSON.</span>`; return; }
+      const problem = validateBank(list);
+      if(problem){ msg.innerHTML = `<span style="color:var(--bad);">${escapeHtml(problem)}</span>`; return; }
+      try{
+        const name = file.name.replace(/\.json$/i, '');
+        await storageSet('custom-bank', JSON.stringify({ name, questions: list }));
+        await storageSet('active-bank', 'custom');
+        msg.innerHTML = `<span style="color:var(--good);">Imported ${list.length} questions. Reloading…</span>`;
+        setTimeout(() => location.reload(), 500);
+      }catch(err){
+        msg.innerHTML = `<span style="color:var(--bad);">Couldn't save the file in this browser (it may be too large or storage is blocked).</span>`;
+      }
+    };
+    reader.readAsText(file);
+  });
+  if(usingCustom){
+    document.getElementById('bank-builtin').addEventListener('click', async () => {
+      await storageSet('active-bank', 'builtin');
+      location.reload();
+    });
+  }
+}
+
+function exportBlob(){
+  return JSON.stringify({ srs, mistakes, wrongHistory, exportedAt: Date.now() });
+}
+
+function drawBackupPanel(panel){
+  panel.innerHTML = `
+    <div class="card">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px;">Back up your progress</div>
+      <div style="color:var(--text-dim);font-size:12.5px;margin-bottom:10px;">Copy this text somewhere safe. If this device's storage ever gets wiped (or you open the trainer fresh somewhere else), paste it back in below to restore everything — New/Due/Learning/Mastered counts, mistakes, and hard questions.</div>
+      <textarea id="backup-text" readonly style="width:100%;height:90px;background:var(--panel-raised);border:1px solid var(--line);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px;margin-bottom:8px;">${escapeHtml(exportBlob())}</textarea>
+      <div class="btnrow" style="margin-top:0;">
+        <button id="copyBackup" style="flex:1;">Copy to clipboard</button>
+      </div>
+      <div style="font-size:13.5px;font-weight:600;margin:16px 0 6px;">Restore from a backup</div>
+      <textarea id="restore-text" placeholder="Paste your backup text here" style="width:100%;height:70px;background:var(--panel-raised);border:1px solid var(--line);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px;margin-bottom:8px;"></textarea>
+      <div class="btnrow" style="margin-top:0;">
+        <button class="primary" id="doRestore" style="flex:1;">Restore</button>
+      </div>
+      <div id="backup-msg" style="font-size:12.5px;margin-top:8px;"></div>
+    </div>
+    <div class="card" style="margin-top:12px;border-color:var(--bad);">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:6px;color:var(--bad);">Start over</div>
+      <div style="color:var(--text-dim);font-size:12.5px;margin-bottom:10px;">Wipes New/Due/Learning/Mastered progress, your Mistakes list, and Hard-question history on this device. Back up first if you might want any of it later.</div>
+      <button id="resetBtn" style="width:100%;border-color:var(--bad);color:var(--bad);">Reset all progress</button>
+      <div id="reset-confirm" style="display:none;margin-top:10px;">
+        <div style="font-size:12.5px;color:var(--bad);margin-bottom:8px;">This can't be undone. Reset everything?</div>
+        <div class="btnrow" style="margin-top:0;">
+          <button id="cancelReset" style="flex:1;">Cancel</button>
+          <button id="confirmReset" class="bad" style="flex:1;">Yes, reset everything</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('reset-confirm').style.display = 'block';
+  });
+  document.getElementById('cancelReset').addEventListener('click', () => {
+    document.getElementById('reset-confirm').style.display = 'none';
+  });
+  document.getElementById('confirmReset').addEventListener('click', () => {
+    srs = {}; mistakes = {}; wrongHistory = {};
+    saveSRS(true);
+    setStudyQueue([]); quizSession = null; browseExpanded = null;
+    activeTab = 'overview';
+    render();
+  });
+  document.getElementById('copyBackup').addEventListener('click', async () => {
+    const ta = document.getElementById('backup-text');
+    ta.select();
+    try{
+      await navigator.clipboard.writeText(ta.value);
+      document.getElementById('backup-msg').innerHTML = `<span style="color:var(--good);">Copied.</span>`;
+    }catch(e){
+      document.getElementById('backup-msg').innerHTML = `<span style="color:var(--text-dim);">Couldn't auto-copy — select the text above and copy it manually.</span>`;
+    }
+  });
+  document.getElementById('doRestore').addEventListener('click', () => {
+    const raw = document.getElementById('restore-text').value.trim();
+    const msg = document.getElementById('backup-msg');
+    if(!raw){ msg.innerHTML = `<span style="color:var(--bad);">Paste your backup text first.</span>`; return; }
+    try{
+      const parsed = JSON.parse(raw);
+      if(!parsed.srs || !parsed.mistakes){ throw new Error('missing fields'); }
+      srs = parsed.srs || {};
+      mistakes = parsed.mistakes || {};
+      wrongHistory = parsed.wrongHistory || {};
+      saveSRS(true);
+      msg.innerHTML = `<span style="color:var(--good);">Restored. Refreshing…</span>`;
+      setTimeout(() => render(), 400);
+    }catch(e){
+      msg.innerHTML = `<span style="color:var(--bad);">That doesn't look like a valid backup — check you copied the whole text.</span>`;
+    }
+  });
+}
+
+function focusList(n){
+  return [...DATA].sort((a,b) => estimatedProb(a) - estimatedProb(b)).slice(0, n);
+}
+
+function statusLabel(q){
+  const s = srs[q.id];
+  if(mistakes[q.id]) return 'mistake';
+  if(!s || s.seen === 0) return 'new';
+  if(s.box >= 5) return 'mastered';
+  if(Date.now() >= s.due) return 'due';
+  return 'learning';
+}
+
+// ---------- OVERVIEW / READINESS ----------
+
+function renderOverview(root){
+  const stats = computeStats();
+  const r = computeReadiness();
+  const mCount = mistakeCount();
+  const hCount = hardCount();
+
+  let band, bandColor;
+  if(r.avgPct >= 80){ band = 'Looking exam-ready'; bandColor = 'var(--good)'; }
+  else if(r.avgPct >= 60){ band = 'Getting there'; bandColor = 'var(--warn)'; }
+  else { band = 'Not there yet'; bandColor = 'var(--bad)'; }
+
+  let nextAction = null;
+  if(mCount > 0) nextAction = { label: `Clear your ${mCount} active mistake${mCount===1?'':'s'}`, tab: 'mistakes' };
+  else if(stats.due > 0) nextAction = { label: `Review ${stats.due} due card${stats.due===1?'':'s'}`, tab: 'study' };
+  else if(stats.n > 0) nextAction = { label: `Study ${Math.min(stats.n,15)} new questions`, tab: 'study' };
+  else nextAction = { label: 'Take a mixed quiz', tab: 'quiz' };
+
+  root.innerHTML = `
+    ${r.totalSeen === 0 ? `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Estimated score on this ${TOTAL}-question bank</div>
+      <div style="font-size:20px;font-weight:600;margin-bottom:4px;">Not started yet</div>
+      <div style="color:var(--text-dim);font-size:12.5px;">You haven't answered anything yet, so there's nothing to estimate from. Study or quiz a batch of questions and this turns into a real score.</div>
+    </div>
+    ` : `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Estimated score on this ${TOTAL}-question bank</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px;">
+        <div style="font-family:var(--mono);font-size:40px;font-weight:600;color:${bandColor};">${r.avgPct}%</div>
+        <div style="font-size:13.5px;color:${bandColor};font-weight:600;">${band}</div>
+      </div>
+      <div style="color:var(--text-dim);font-size:12.5px;margin-bottom:12px;">≈ ${r.estCorrect} / ${TOTAL} correct if tested on everything right now — includes a small guessing-credit for the ${stats.n} you haven't studied, not a real "known" score</div>
+      <div class="progress-bar" style="margin-bottom:4px;"><div class="progress-fill" style="width:${r.avgPct}%;background:${bandColor};"></div></div>
+    </div>
+    `}
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:10px;">Where that number comes from</div>
+      <div style="font-size:13px;line-height:1.7;color:#c9d3da;">
+        <div><span style="color:var(--good);">●</span> ${stats.mastered} mastered — counted at ~95–97% likely correct</div>
+        <div><span style="color:var(--accent);">●</span> ${stats.learning} in progress — counted at ~55–85%, depending on stage</div>
+        <div><span style="color:var(--warn);">●</span> ${stats.due} due for review — counted lower until re-confirmed</div>
+        <div><span style="color:var(--text-dim);">●</span> ${stats.n} not studied yet — counted at a bare guessing rate (~15–30% for multiple choice), not treated as zero</div>
+      </div>
+      ${r.realAccuracy !== null ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--text-dim);">Your actual hit rate on the ${r.totalSeen} questions you've attempted so far: <strong style="color:var(--text);">${r.realAccuracy}%</strong></div>` : ''}
+    </div>
+
+    ${(mCount > 0 || hCount > 0) ? `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:8px;">Risk areas</div>
+      <div style="font-size:13px;color:#c9d3da;line-height:1.7;">
+        ${mCount > 0 ? `<div>${mCount} question${mCount===1?'':'s'} currently in your active Mistakes list (not yet re-confirmed ${REQUIRED_STREAK}x in a row)</div>` : ''}
+        ${hCount > 0 ? `<div>${hCount} question${hCount===1?'':'s'} flagged as recurring weak spots (missed ${HARD_THRESHOLD}+ times total)</div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Where to focus for the biggest score gain</div>
+      <div style="color:var(--text-dim);font-size:12.5px;margin-bottom:12px;">These ${Math.min(15, TOTAL)} questions currently drag your score down the most — fixing them raises your estimate faster than reviewing ones you're already solid on.</div>
+      <div id="focuslist" style="max-height:340px;overflow-y:auto;margin-bottom:12px;"></div>
+      <div class="btnrow" style="margin-top:0;">
+        <button class="primary" id="studyFocus" style="flex:1;">Study these</button>
+        <button id="quizFocus" style="flex:1;">Quiz these</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px;">Suggested next step</div>
+      <div style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">${nextAction.label}</div>
+      <button class="primary" id="goNext" style="width:100%;">Go</button>
+    </div>
+
+    <div style="color:var(--text-dim);font-size:11.5px;line-height:1.6;">
+      This estimates how well you know <em>this</em> ${TOTAL}-question set, not a guaranteed real-exam score. The actual ServiceNow CSA exam draws about 60 questions from a wider pool, and ServiceNow doesn't publish its pass mark (community estimates range 70–85%, unconfirmed). Treat this as a directional signal, aim comfortably above it, and don't stop at "mastered" on everything — understanding <em>why</em> answers are right matters more than memorizing this specific set.
+    </div>
+  `;
+  document.getElementById('goNext').addEventListener('click', () => {
+    activeTab = nextAction.tab;
+    if(activeTab === 'study'){ setStudyQueue([]); }
+    if(activeTab === 'quiz'){ quizSession = null; }
+    render();
+  });
+
+  const focus = focusList(15);
+  document.getElementById('focuslist').innerHTML = focus.map(q => {
+    const pct = Math.round(estimatedProb(q)*100);
+    return `<div class="review-item"><div class="rq">${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,85))}</div>
+      <div class="ra"><span class="box-pill" style="margin-right:6px;">${statusLabel(q)}</span>~${pct}% likely correct</div></div>`;
+  }).join('');
+  document.getElementById('studyFocus').addEventListener('click', () => {
+    setStudyQueue(focus.slice());
+    activeTab = 'study';
+    render();
+  });
+  document.getElementById('quizFocus').addEventListener('click', () => {
+    startQuizSession(focus.map(q=>q.id));
+    activeTab = 'quiz';
+    render();
+  });
+}
+
+// ---------- STUDY (flashcard / SRS) ----------
+
+function buildStudyQueue(){
+  const due = DATA.filter(q => classify(q.id) === 'due');
+  const learning = DATA.filter(q => classify(q.id) === 'learning');
+  const fresh = DATA.filter(q => classify(q.id) === 'new');
+  // Prioritize due, then a slice of new, then learning as filler
+  const queue = [...due, ...fresh.slice(0, 15), ...learning];
+  // shuffle lightly
+  for(let i=queue.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [queue[i],queue[j]]=[queue[j],queue[i]]; }
+  return queue;
+}
+
+function renderStudySetup(root){
+  if(studyQueue.length === 0){
+    const q = buildStudyQueue();
+    if(q.length === 0){
+      root.innerHTML = `<div class="card empty"><div class="big">✓</div>Nothing due right now.<br>Everything you've studied is on schedule.</div>`;
+      return;
+    }
+    studyQueue = q;
+    studyIdx = 0;
+    studyAnswers = {};
+  }
+  renderFlashcard(root);
+}
+
+function renderFlashcard(root){
+  if(studyIdx >= studyQueue.length){
+    root.innerHTML = `<div class="card empty"><div class="big">✓</div>Session complete — ${studyQueue.length} cards reviewed.<br><br><button class="primary" id="restart">Study more</button></div>`;
+    document.getElementById('restart').addEventListener('click', () => { setStudyQueue([]); renderStudySetup(root); });
+    return;
+  }
+  const q = studyQueue[studyIdx];
+  const s = getState(q.id);
+  const pct = Math.round((studyIdx/studyQueue.length)*100);
+  const stored = studyAnswers[studyIdx];
+  let revealed = !!stored;
+  let selection = stored ? stored.selection : [];
+
+  function draw(){
+    const boxLabel = s.seen === 0 ? 'new' : (s.box>=5 ? 'mastered' : 'box '+s.box);
+    const isReview = !!studyAnswers[studyIdx];
+    root.innerHTML = `
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="btnrow" style="margin-bottom:2px;">
+        <button id="exitStudy" class="ghost" style="flex:none;">← Exit to Study setup</button>
+      </div>
+      <div class="card">
+        <div class="qid">
+          <span>${q.id.toUpperCase()} &middot; ${studyIdx+1} / ${studyQueue.length}</span>
+          <span class="box-pill">${boxLabel}</span>
+        </div>
+        <div class="qtext">${escapeHtml(q.question)}</div>
+        ${q.type === 'text' ? renderTextPrompt(q, revealed) : `<div>${q.options.map(o => optionHtml(q,o,selection,revealed)).join('')}</div>`}
+        ${revealed ? selectionHint(q, selection) : ''}
+        ${isReview ? `<div style="font-size:12.5px;margin-top:8px;color:var(--text-dim);">You previously marked this: <strong style="color:${studyAnswers[studyIdx].gotIt?'var(--good)':'var(--bad)'};">${studyAnswers[studyIdx].gotIt ? '✓ Knew it' : "✗ Didn't know it"}</strong></div>` : ''}
+        ${revealed ? renderExplain(q) : ''}
+        <div class="btnrow">
+          ${studyIdx > 0 ? `<button id="studyPrev" style="flex:1;">← Previous</button>` : ''}
+          ${!revealed ? `<button class="primary" id="reveal" style="flex:2;">${q.type==='text' ? 'Show answer' : 'Check answer'}</button>` : ''}
+          ${isReview && studyIdx+1 < studyQueue.length ? `<button class="primary" id="studyNext" style="flex:1;">Next →</button>` : ''}
+        </div>
+        ${revealed && !isReview ? `
+        <div class="btnrow">
+          <button class="bad" id="missed">✗ Didn't know it</button>
+          <button class="good" id="knew">✓ Knew it</button>
+        </div>` : ''}
+      </div>
+    `;
+    document.getElementById('exitStudy').addEventListener('click', () => {
+      setStudyQueue([]);
+      renderStudySetup(root);
+      render_stats_only();
+    });
+    if(studyIdx > 0){
+      document.getElementById('studyPrev').addEventListener('click', () => { studyIdx--; renderFlashcard(root); });
+    }
+    if(!revealed){
+      if(q.type !== 'text'){
+        root.querySelectorAll('.opt').forEach(el => el.addEventListener('click', () => {
+          const oid = el.dataset.oid;
+          if(q.type === 'single'){ selection = [oid]; }
+          else {
+            if(selection.includes(oid)) selection = selection.filter(x=>x!==oid);
+            else selection.push(oid);
+          }
+          draw();
+        }));
+      }
+      document.getElementById('reveal').addEventListener('click', () => { revealed = true; draw(); });
+    } else if(isReview){
+      document.getElementById('studyNext').addEventListener('click', () => { studyIdx++; renderFlashcard(root); });
+    } else {
+      document.getElementById('missed').addEventListener('click', () => {
+        studyAnswers[studyIdx] = { gotIt: false, selection };
+        recordResult(q.id, false); studyIdx++; render_wrap();
+      });
+      document.getElementById('knew').addEventListener('click', () => {
+        studyAnswers[studyIdx] = { gotIt: true, selection };
+        recordResult(q.id, true); studyIdx++; render_wrap();
+      });
+    }
+  }
+  function render_wrap(){ renderFlashcard(root); render_stats_only(); }
+  draw();
+}
+
+function selectionHint(q, selection){
+  if(q.type === 'text') return '';
+  if(selection.length === 0) return `<div style="color:var(--text-dim);font-size:13px;margin-top:8px;">You didn't pick an option before checking — the correct one is highlighted above.</div>`;
+  const sortedSel = [...selection].sort();
+  const sortedCorrect = [...getCorrectIds(q)].sort();
+  const wasRight = sortedSel.length === sortedCorrect.length && sortedSel.every((v,i)=>v===sortedCorrect[i]);
+  return `<div style="font-size:13px;margin-top:8px;font-weight:600;color:${wasRight?'var(--good)':'var(--bad)'};">${wasRight ? '✓ Your pick was correct' : '✗ Your pick was wrong — the correct answer is highlighted above'}</div>`;
+}
+
+function render_stats_only(){
+  // patch the top stat numbers in place, without a full re-render (avoids flicker mid-session)
+  const stats = computeStats();
+  const row = document.querySelectorAll('.stat .n');
+  if(row.length === 5){
+    row[0].textContent = stats.n;
+    row[1].textContent = stats.due;
+    row[2].textContent = stats.learning;
+    row[3].textContent = stats.mastered;
+    row[4].textContent = mistakeCount();
+  }
+}
+
+function renderTextPrompt(q, revealed){
+  if(!revealed) return `<div style="color:var(--text-dim);font-size:13px;">Fill-in-the-blank — think of your answer, then reveal.</div>`;
+  return `<div style="font-size:14.5px;"><strong>Answer:</strong> ${escapeHtml(getCorrectText(q))}</div>`;
+}
+
+function renderExplain(q){
+  const flagLink = `<div style="margin-top:10px;"><a href="#" data-quickfix="${q.id}" style="color:var(--text-dim);font-size:11.5px;">⚑ This answer looks wrong? Fix it</a></div>`;
+  if(!q.explanation) return `<div class="explain"><span class="lbl">Explanation</span><span class="no-explain">No explanation provided in the source material.</span>${flagLink}</div>`;
+  return `<div class="explain"><span class="lbl">Explanation</span>${escapeHtml(q.explanation)}${flagLink}</div>`;
+}
+
+// Single delegated handler for every "flag this answer" link across Study/Quiz/Browse —
+// jumps straight to the Fixes tab with that question already open.
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('[data-quickfix]');
+  if(!link) return;
+  e.preventDefault();
+  const qid = link.dataset.quickfix;
+  fixesExpanded = qid;
+  activeTab = 'fixes';
+  render();
+});
+
+// ---------- QUIZ ----------
+
+function renderQuizSetup(root){
+  if(quizSession && !quizSession.done){
+    renderQuizQuestion(root);
+    return;
+  }
+  if(quizSession && quizSession.done){
+    renderQuizResults(root);
+    return;
+  }
+  root.innerHTML = `
+    <div class="card">
+      <div style="font-size:14.5px;margin-bottom:12px;font-weight:600;">Start a quiz</div>
+      <div class="setup-row" id="lenrow">
+        <button data-len="10">10 questions</button>
+        <button data-len="25">25 questions</button>
+        <button data-len="50">50 questions</button>
+      </div>
+      <div class="setup-row" id="poolrow">
+        <button data-pool="due" class="active">Due &amp; new (recommended)</button>
+        <button data-pool="new">New only</button>
+        <button data-pool="all">Random from all ${TOTAL}</button>
+        <button data-pool="mistakes">My mistakes (${mistakeCount()})</button>
+      </div>
+      <div class="range-inputs">or a specific range: Q<input type="number" id="rfrom" min="1" max="${TOTAL}" placeholder="1"> to Q<input type="number" id="rto" min="1" max="${TOTAL}" placeholder="20"></div>
+      <button class="primary" id="startquiz" style="width:100%;">Start</button>
+    </div>
+  `;
+  let len = 10, pool = 'due';
+  root.querySelectorAll('#lenrow button').forEach(b => b.addEventListener('click', () => {
+    len = parseInt(b.dataset.len);
+    root.querySelectorAll('#lenrow button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  root.querySelectorAll('#poolrow button').forEach(b => b.addEventListener('click', () => {
+    pool = b.dataset.pool;
+    root.querySelectorAll('#poolrow button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+  document.getElementById('startquiz').addEventListener('click', () => {
+    const from = parseInt(document.getElementById('rfrom').value);
+    const to = parseInt(document.getElementById('rto').value);
+    let ids;
+    if(from && to){
+      ids = DATA.filter(d => { const n=parseInt(d.id.slice(1)); return n>=from && n<=to; }).map(d=>d.id);
+    } else if(pool === 'mistakes' && mistakeCount() === 0){
+      root.querySelector('#mistakeswarn')?.remove();
+      const warn = document.createElement('div');
+      warn.id = 'mistakeswarn';
+      warn.style.cssText = 'color:var(--bad);font-size:13px;margin-bottom:10px;';
+      warn.textContent = "You don't have any tracked mistakes yet.";
+      document.getElementById('startquiz').insertAdjacentElement('beforebegin', warn);
+      return;
+    } else if(pool === 'new' && DATA.filter(d => classify(d.id) === 'new').length === 0){
+      root.querySelector('#mistakeswarn')?.remove();
+      const warn = document.createElement('div');
+      warn.id = 'mistakeswarn';
+      warn.style.cssText = 'color:var(--bad);font-size:13px;margin-bottom:10px;';
+      warn.textContent = "You've studied every question at least once — nothing left that's still \"new.\"";
+      document.getElementById('startquiz').insertAdjacentElement('beforebegin', warn);
+      return;
+    } else {
+      let source = DATA;
+      if(pool === 'due'){
+        const dueAndNew = DATA.filter(d => { const c = classify(d.id); return c === 'due' || c === 'new'; });
+        // if there aren't enough due/new questions to fill the requested length, top up with
+        // "learning" ones (recently answered right, not yet due again) rather than leaving it short
+        source = dueAndNew.length >= len ? dueAndNew : [...dueAndNew, ...DATA.filter(d => classify(d.id) === 'learning')];
+      }
+      if(pool === 'new') source = DATA.filter(d => classify(d.id) === 'new');
+      if(pool === 'mistakes') source = DATA.filter(d => mistakes[d.id]);
+      const shuffled = [...source];
+      for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+      ids = shuffled.slice(0, len).map(d=>d.id);
+    }
+    if(ids.length === 0){ return; }
+    startQuizSession(ids);
+    renderQuizQuestion(root);
+  });
+}
+
+function renderQuizQuestion(root){
+  const q = byId(quizSession.ids[quizSession.idx]);
+  const stored = quizSession.answers[quizSession.idx];
+  let selection = stored ? stored.selection : [];
+  let answered = !!stored;
+
+  function draw(){
+    const pct = Math.round((quizSession.idx/quizSession.ids.length)*100);
+    const nextLabel = quizSession.idx+1 < quizSession.ids.length ? 'Next question' : 'See results';
+    const isReview = !!quizSession.answers[quizSession.idx];
+    root.innerHTML = `
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="btnrow" style="margin-bottom:2px;">
+        <button id="exitQuiz" class="ghost" style="flex:none;">← Exit quiz</button>
+      </div>
+      <div class="card">
+        <div class="qid"><span>${q.id.toUpperCase()} &middot; ${quizSession.idx+1} / ${quizSession.ids.length}</span>${q.type==='multi' ? '<span class="box-pill">choose '+getCorrectIds(q).length+'</span>' : ''}</div>
+        <div class="qtext">${escapeHtml(q.question)}</div>
+        <div id="optzone">${q.type==='text' ? `<input type="text" class="text-answer" id="txtans" placeholder="Type your answer" value="${answered ? escapeHtml(selection[0]||'') : ''}" ${answered?'disabled':''}>` : q.options.map(o => optionHtml(q,o,selection,answered)).join('')}</div>
+        ${answered ? `<div class="btnrow" style="margin-top:10px;">
+            ${quizSession.idx > 0 ? `<button id="quizPrev" style="flex:1;">← Previous</button>` : ''}
+            <button class="primary" id="nextTop" style="flex:2;">${nextLabel}</button>
+          </div>` : ''}
+        ${answered ? renderExplain(q) : ''}
+        <div class="btnrow">
+          ${!answered ? `
+            ${quizSession.idx > 0 ? `<button id="quizPrevB" style="flex:1;">← Previous</button>` : ''}
+            <button class="primary" id="submit" style="flex:2;">Submit</button>
+          ` : `
+            ${quizSession.idx > 0 ? `<button id="quizPrev2" style="flex:1;">← Previous</button>` : ''}
+            <button class="primary" id="next" style="flex:2;">${nextLabel}</button>
+          `}
+        </div>
+      </div>
+    `;
+    document.getElementById('exitQuiz').addEventListener('click', () => {
+      quizSession = null;
+      renderQuizSetup(root);
+      render_stats_only();
+    });
+    const goPrev = () => { quizSession.idx--; renderQuizQuestion(root); };
+    if(quizSession.idx > 0){
+      document.getElementById('quizPrev')?.addEventListener('click', goPrev);
+      document.getElementById('quizPrevB')?.addEventListener('click', goPrev);
+      document.getElementById('quizPrev2')?.addEventListener('click', goPrev);
+    }
+    if(!answered){
+      if(q.type !== 'text'){
+        root.querySelectorAll('.opt').forEach(el => el.addEventListener('click', () => {
+          const oid = el.dataset.oid;
+          if(q.type === 'single'){ selection = [oid]; }
+          else {
+            if(selection.includes(oid)) selection = selection.filter(x=>x!==oid);
+            else selection.push(oid);
+          }
+          draw();
+        }));
+      }
+      document.getElementById('submit').addEventListener('click', () => {
+        let correct;
+        if(q.type === 'text'){
+          const val = (document.getElementById('txtans').value || '').trim().toLowerCase();
+          correct = val.length>0 && val === getCorrectText(q).trim().toLowerCase();
+          selection = [val];
+        } else {
+          const sortedSel = [...selection].sort();
+          const sortedCorrect = [...getCorrectIds(q)].sort();
+          correct = sortedSel.length === sortedCorrect.length && sortedSel.every((v,i)=>v===sortedCorrect[i]);
+        }
+        answered = true;
+        quizSession.answers[quizSession.idx] = { selection, correct };
+        recordResult(q.id, correct);
+        quizSession.results.push({ id: q.id, correct });
+        render_stats_only();
+        draw();
+      });
+    } else {
+      const goNext = () => {
+        quizSession.idx++;
+        if(quizSession.idx >= quizSession.ids.length){ quizSession.done = true; renderQuizResults(root); }
+        else renderQuizQuestion(root);
+      };
+      document.getElementById('next').addEventListener('click', goNext);
+      document.getElementById('nextTop').addEventListener('click', goNext);
+    }
+  }
+  draw();
+}
+
+function optionHtml(q, o, selection, answered){
+  const isSel = selection.includes(o.id);
+  const isCorrect = getCorrectIds(q).includes(o.id);
+  let cls = 'opt';
+  if(answered){
+    cls += ' disabled';
+    if(isCorrect) cls += ' correct';
+    else if(isSel && !isCorrect) cls += ' incorrect';
+  } else if(isSel){
+    cls += ' selected';
+  }
+  return `<div class="${cls}" data-oid="${o.id}"><span class="tag">${o.id}</span><span>${escapeHtml(o.text)}</span></div>`;
+}
+
+let resultsExpanded = null;
+
+function renderQuizResults(root){
+  render_stats_only();
+  const total = quizSession.results.length;
+  const correct = quizSession.results.filter(r=>r.correct).length;
+  const pct = Math.round((correct/total)*100);
+
+  function draw(){
+    root.innerHTML = `
+      <div class="card">
+        <div class="score-big">${pct}%</div>
+        <div class="score-sub">${correct} of ${total} correct</div>
+        <div class="btnrow">
+          <button class="primary" id="again" style="flex:1;">New quiz</button>
+        </div>
+        <div style="margin-top:18px;" id="resultsList"></div>
+      </div>
+    `;
+    document.getElementById('resultsList').innerHTML = quizSession.results.map((r, i) => {
+      const q = byId(r.id);
+      const isOpen = resultsExpanded === i;
+      const idx = quizSession.ids.indexOf(r.id);
+      const stored = quizSession.answers[idx];
+      let body = '';
+      if(isOpen){
+        const answerBody = q.type === 'text'
+          ? `<div style="font-size:14.5px;margin:10px 0;"><strong>Correct answer:</strong> ${escapeHtml(getCorrectText(q))}${stored ? `<br><strong>You answered:</strong> ${escapeHtml(stored.selection[0]||'(blank)')}` : ''}</div>`
+          : `<div style="margin:10px 0;">${q.options.map(o => optionHtml(q, o, stored ? stored.selection : [], true)).join('')}</div>`;
+        body = `
+          <div style="padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px;">
+            ${answerBody}
+            ${renderExplain(q)}
+            <div class="btnrow">
+              <button class="primary" data-study="${q.id}">Study this question</button>
+            </div>
+          </div>
+        `;
+      }
+      return `<div class="review-item">
+        <div class="rq" data-toggle="${i}" style="cursor:pointer;">${r.correct?'<span class="ok-mark">✓</span>':'<span class="bad-mark">✗</span>'} ${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,90))} <span style="color:var(--text-dim);">${isOpen ? '▲' : '▼'}</span></div>
+        ${body}
+      </div>`;
+    }).join('');
+
+    document.getElementById('again').addEventListener('click', () => { quizSession = null; resultsExpanded = null; renderQuizSetup(root); });
+    root.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => {
+      const i = parseInt(el.dataset.toggle);
+      resultsExpanded = (resultsExpanded === i) ? null : i;
+      draw();
+    }));
+    root.querySelectorAll('[data-study]').forEach(el => el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const q = byId(el.dataset.study);
+      setStudyQueue([q]);
+      quizSession = null;
+      resultsExpanded = null;
+      activeTab = 'study';
+      render();
+    }));
+  }
+  draw();
+}
+
+// ---------- MISTAKES ----------
+
+function renderMistakesTab(root){
+  root.innerHTML = `
+    <div class="setup-row" id="mistview" style="margin-bottom:14px;">
+      <button data-view="active" class="${mistakesView==='active'?'active':''}">Active (${mistakeCount()})</button>
+      <button data-view="hard" class="${mistakesView==='hard'?'active':''}">Hard — permanent (${hardCount()})</button>
+    </div>
+    <div id="mist-body"></div>
+  `;
+  root.querySelectorAll('#mistview button').forEach(b => b.addEventListener('click', () => {
+    mistakesView = b.dataset.view;
+    renderMistakesTab(root);
+  }));
+  if(mistakesView === 'active') drawActiveMistakes(root);
+  else drawHardMistakes(root);
+}
+
+function drawActiveMistakes(root){
+  const body = document.getElementById('mist-body');
+  const ids = Object.keys(mistakes).sort((a,b) => (mistakes[b].lastWrong||0)-(mistakes[a].lastWrong||0));
+  if(ids.length === 0){
+    body.innerHTML = `<div class="card empty"><div class="big">✓</div>No outstanding mistakes.<br>Anything you get wrong in Study or Quiz mode lands here.</div>`;
+    return;
+  }
+  body.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:14.5px;font-weight:600;margin-bottom:4px;">${ids.length} question${ids.length===1?'':'s'} to fix</div>
+      <div style="color:var(--text-dim);font-size:13px;margin-bottom:14px;">Answer a question right ${REQUIRED_STREAK} times in a row to clear it from this list. A single wrong answer resets its streak back to 0.</div>
+      <div class="btnrow">
+        <button class="primary" id="quizMistakes" style="flex:1;">Quiz me on these</button>
+        <button id="flashMistakes" style="flex:1;">Flashcard review</button>
+      </div>
+    </div>
+    <div class="card" id="mistlist" style="max-height:520px;overflow-y:auto;"></div>
+  `;
+  document.getElementById('mistlist').innerHTML = ids.map(id => {
+    const q = byId(id);
+    const streak = mistakes[id].streak || 0;
+    return `<div class="review-item"><div class="rq">${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,90))}</div>
+      <div class="ra"><span class="box-pill" style="margin-right:8px;">${streak}/${REQUIRED_STREAK} correct in a row</span><a href="#" data-clear="${id}" style="color:var(--text-dim);">clear</a></div></div>`;
+  }).join('');
+  root.querySelectorAll('[data-clear]').forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    delete mistakes[el.dataset.clear];
+    saveSRS();
+    renderMistakesTab(root);
+    render_stats_only();
+  }));
+  document.getElementById('quizMistakes').addEventListener('click', () => {
+    const shuffled = [...ids];
+    for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+    startQuizSession(shuffled);
+    activeTab = 'quiz';
+    render();
+  });
+  document.getElementById('flashMistakes').addEventListener('click', () => {
+    const shuffled = ids.map(byId);
+    for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+    setStudyQueue(shuffled);
+    activeTab = 'study';
+    render();
+  });
+}
+
+function drawHardMistakes(root){
+  const body = document.getElementById('mist-body');
+  const ids = hardIds().sort((a,b) => wrongHistory[b]-wrongHistory[a]);
+  if(ids.length === 0){
+    body.innerHTML = `<div class="card empty"><div class="big">—</div>Nothing here yet.<br>Questions you've missed ${HARD_THRESHOLD}+ times total land here permanently, even after you clear them from Active — so you can keep coming back to your genuine weak spots.</div>`;
+    return;
+  }
+  body.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:14.5px;font-weight:600;margin-bottom:4px;">${ids.length} recurring weak spot${ids.length===1?'':'s'}</div>
+      <div style="color:var(--text-dim);font-size:13px;margin-bottom:14px;">Missed ${HARD_THRESHOLD}+ times total. These stay listed here permanently as a reminder, even once you've cleared them from Active.</div>
+      <div class="btnrow">
+        <button class="primary" id="quizHard" style="flex:1;">Quiz me on these</button>
+        <button id="flashHard" style="flex:1;">Flashcard review</button>
+      </div>
+    </div>
+    <div class="card" id="hardlist" style="max-height:520px;overflow-y:auto;"></div>
+  `;
+  document.getElementById('hardlist').innerHTML = ids.map(id => {
+    const q = byId(id);
+    return `<div class="review-item"><div class="rq">${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,90))}</div>
+      <div class="ra"><span class="box-pill" style="margin-right:8px;">missed ${wrongHistory[id]}x</span><a href="#" data-unhard="${id}" style="color:var(--text-dim);">remove from list</a></div></div>`;
+  }).join('');
+  root.querySelectorAll('[data-unhard]').forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    delete wrongHistory[el.dataset.unhard];
+    saveSRS();
+    renderMistakesTab(root);
+  }));
+  document.getElementById('quizHard').addEventListener('click', () => {
+    const shuffled = [...ids];
+    for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+    startQuizSession(shuffled);
+    activeTab = 'quiz';
+    render();
+  });
+  document.getElementById('flashHard').addEventListener('click', () => {
+    const shuffled = ids.map(byId);
+    for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
+    setStudyQueue(shuffled);
+    activeTab = 'study';
+    render();
+  });
+}
+
+// ---------- FIXES (user-submitted answer corrections) ----------
+
+let fixesFilter = '';
+let fixesExpanded = null;
+
+function renderFixesTab(root){
+  const correctedCount = Object.keys(overrides).length;
+  root.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:14.5px;font-weight:600;margin-bottom:4px;">Fix a wrong answer</div>
+      <div style="color:var(--text-dim);font-size:12.5px;margin-bottom:12px;">Think an answer in this question set is wrong? Search for the question, pick the option(s) you believe are actually correct, and save — every quiz, study card, and browse view will use your fix from then on.</div>
+      <input type="text" class="text-answer" id="fixsearch" placeholder="Search questions to fix..." value="${escapeHtml(fixesFilter)}">
+      <div id="fixresults" style="max-height:420px;overflow-y:auto;"></div>
+    </div>
+    ${correctedCount > 0 ? `
+    <div class="card">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:10px;">Your ${correctedCount} correction${correctedCount===1?'':'s'}</div>
+      <div id="myfixes"></div>
+    </div>` : ''}
+  `;
+
+  const input = document.getElementById('fixsearch');
+  input.addEventListener('input', () => { fixesFilter = input.value; drawFixResults(); });
+
+  function drawFixResults(){
+    const term = fixesFilter.trim().toLowerCase();
+    const resultsEl = document.getElementById('fixresults');
+    let list = term ? DATA.filter(d => d.question.toLowerCase().includes(term)) : [];
+    // If a question was opened via a "flag this" quick-link, always show it pinned at
+    // the top, even if it doesn't match the current search term (or there is none).
+    if(fixesExpanded && !list.some(d => d.id === fixesExpanded)){
+      list = [byId(fixesExpanded), ...list];
+    }
+    if(list.length === 0){ resultsEl.innerHTML = term ? `<div class="empty">No matches</div>` : ''; return; }
+    const shown = list.slice(0, 30);
+    resultsEl.innerHTML = shown.map(q => {
+      const isOpen = fixesExpanded === q.id;
+      return `<div class="review-item">
+        <div class="rq" data-fixtoggle="${q.id}" style="cursor:pointer;">${isOverridden(q.id) ? '<span style="color:var(--warn);">⚑</span> ' : ''}${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,100))} <span style="color:var(--text-dim);">${isOpen?'▲':'▼'}</span></div>
+        ${isOpen ? `<div id="fixeditor-${q.id}" style="margin-top:8px;"></div>` : ''}
+      </div>`;
+    }).join('') + (list.length > 30 ? `<div class="review-item ra">+ ${list.length-30} more — refine your search</div>` : '');
+
+    resultsEl.querySelectorAll('[data-fixtoggle]').forEach(el => el.addEventListener('click', () => {
+      const id = el.dataset.fixtoggle;
+      fixesExpanded = (fixesExpanded === id) ? null : id;
+      drawFixResults();
+      if(fixesExpanded) drawFixEditor(document.getElementById('fixeditor-'+fixesExpanded), byId(fixesExpanded));
+    }));
+  }
+  drawFixResults();
+  if(fixesExpanded){
+    const el = document.getElementById('fixeditor-'+fixesExpanded);
+    if(el) drawFixEditor(el, byId(fixesExpanded));
+  }
+
+  if(correctedCount > 0) drawMyFixes(document.getElementById('myfixes'));
+}
+
+function drawFixEditor(container, q){
+  if(!container || !q) return;
+  const current = overrides[q.id];
+  if(q.type === 'text'){
+    const val = current ? current.answerText : q.answerText;
+    container.innerHTML = `
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;">Correct answer text:</div>
+      <input type="text" class="text-answer" id="fixtext-${q.id}" value="${escapeHtml(val)}">
+      <div class="btnrow" style="margin-top:0;">
+        <button class="primary" id="savefix-${q.id}" style="flex:1;">Save correction</button>
+        ${current ? `<button id="revertfix-${q.id}" style="flex:1;">Revert to original</button>` : ''}
+      </div>
+    `;
+    document.getElementById(`savefix-${q.id}`).addEventListener('click', () => {
+      const newVal = document.getElementById(`fixtext-${q.id}`).value.trim();
+      if(!newVal) return;
+      overrides[q.id] = { answerText: newVal, fixedAt: Date.now() };
+      saveSRS();
+      render();
+    });
+    if(current){
+      document.getElementById(`revertfix-${q.id}`).addEventListener('click', () => {
+        delete overrides[q.id];
+        saveSRS();
+        render();
+      });
+    }
+    return;
+  }
+  let selection = current ? current.correct.slice() : q.correct.slice();
+  function draw(){
+    container.innerHTML = `
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;">Tap the option(s) that are actually correct:</div>
+      ${q.options.map(o => {
+        const isSel = selection.includes(o.id);
+        return `<div class="opt ${isSel?'selected':''}" data-fixopt="${o.id}"><span class="tag">${o.id}</span><span>${escapeHtml(o.text)}</span></div>`;
+      }).join('')}
+      <div class="btnrow" style="margin-top:0;">
+        <button class="primary" id="savefix-${q.id}" style="flex:1;">Save correction</button>
+        ${current ? `<button id="revertfix-${q.id}" style="flex:1;">Revert to original</button>` : ''}
+      </div>
+    `;
+    container.querySelectorAll('[data-fixopt]').forEach(el => el.addEventListener('click', () => {
+      const oid = el.dataset.fixopt;
+      if(q.type === 'single'){ selection = [oid]; }
+      else {
+        if(selection.includes(oid)) selection = selection.filter(x=>x!==oid);
+        else selection.push(oid);
+      }
+      draw();
+    }));
+    document.getElementById(`savefix-${q.id}`).addEventListener('click', () => {
+      if(selection.length === 0) return;
+      const same = selection.length === q.correct.length && [...selection].sort().every((v,i)=>v===[...q.correct].sort()[i]);
+      if(same){ delete overrides[q.id]; }
+      else { overrides[q.id] = { correct: selection.slice(), fixedAt: Date.now() }; }
+      saveSRS();
+      render();
+    });
+    if(current){
+      document.getElementById(`revertfix-${q.id}`).addEventListener('click', () => {
+        delete overrides[q.id];
+        saveSRS();
+        render();
+      });
+    }
+  }
+  draw();
+}
+
+function drawMyFixes(container){
+  if(!container) return;
+  const ids = Object.keys(overrides).sort((a,b) => (overrides[b].fixedAt||0)-(overrides[a].fixedAt||0));
+  container.innerHTML = ids.map(id => {
+    const q = byId(id);
+    const o = overrides[id];
+    const desc = q.type === 'text'
+      ? `Answer set to: <strong>${escapeHtml(o.answerText)}</strong>`
+      : `Correct set to: <strong>${o.correct.map(c=>c.toUpperCase()).join(', ')}</strong>`;
+    return `<div class="review-item"><div class="rq">${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,80))}</div>
+      <div class="ra">${desc} &middot; <a href="#" data-editfix="${id}" style="color:var(--text-dim);">edit</a> &middot; <a href="#" data-revertfix="${id}" style="color:var(--text-dim);">revert</a></div></div>`;
+  }).join('');
+  container.querySelectorAll('[data-editfix]').forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    fixesExpanded = el.dataset.editfix;
+    render();
+  }));
+  container.querySelectorAll('[data-revertfix]').forEach(el => el.addEventListener('click', (e) => {
+    e.preventDefault();
+    delete overrides[el.dataset.revertfix];
+    saveSRS();
+    render();
+  }));
+}
+
+// ---------- BROWSE ----------
+
+let browseFilter = '';
+let browseExpanded = null;
+let browseMode = 'search'; // 'search' | 'read'
+let readIdx = 0;
+let readDirection = 'asc'; // 'asc' = first → last question, 'desc' = last → first
+
+function renderBrowse(root){
+  root.innerHTML = `
+    <div class="setup-row" style="margin-bottom:14px;">
+      <button data-mode="search" class="${browseMode==='search'?'active':''}">Search</button>
+      <button data-mode="read" class="${browseMode==='read'?'active':''}">Read through</button>
+    </div>
+    <div id="browse-body"></div>
+  `;
+  root.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+    browseMode = b.dataset.mode;
+    renderBrowse(root);
+  }));
+  if(browseMode === 'search') drawSearchMode(root);
+  else drawReadMode(root);
+}
+
+function drawSearchMode(root){
+  const body = document.getElementById('browse-body');
+  body.innerHTML = `
+    <div class="card" style="padding-bottom:8px;">
+      <input type="text" class="text-answer" id="search" placeholder="Search questions..." value="${escapeHtml(browseFilter)}">
+      <div id="results" style="max-height:560px;overflow-y:auto;"></div>
+    </div>
+  `;
+  const input = document.getElementById('search');
+  input.addEventListener('input', () => { browseFilter = input.value; drawResults(); });
+
+  function drawResults(){
+    const term = browseFilter.trim().toLowerCase();
+    const list = term ? DATA.filter(d => d.question.toLowerCase().includes(term)) : DATA;
+    const shown = list.slice(0, 60);
+    const resultsEl = document.getElementById('results');
+    if(shown.length === 0){
+      resultsEl.innerHTML = `<div class="empty">No matches</div>`;
+      return;
+    }
+    resultsEl.innerHTML = shown.map(q => {
+      const c = classify(q.id);
+      const isOpen = browseExpanded === q.id;
+      let body = '';
+      if(isOpen){
+        const answerBody = q.type === 'text'
+          ? `<div style="font-size:14.5px;margin:10px 0;"><strong>Answer:</strong> ${escapeHtml(getCorrectText(q))}</div>`
+          : `<div style="margin:10px 0;">${q.options.map(o => optionHtml(q,o,[],true)).join('')}</div>`;
+        body = `
+          <div style="padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px;">
+            ${answerBody}
+            ${renderExplain(q)}
+            <div class="btnrow">
+              <button class="primary" data-study="${q.id}">Study this question</button>
+            </div>
+          </div>
+        `;
+      }
+      return `<div class="review-item">
+        <div class="rq" data-toggle="${q.id}" style="cursor:pointer;"><span class="box-pill" style="margin-right:6px;">${c}</span>${escapeHtml(q.id.toUpperCase())}: ${escapeHtml(truncate(q.question,110))} <span style="color:var(--text-dim);">${isOpen ? '▲' : '▼'}</span></div>
+        ${body}
+      </div>`;
+    }).join('') + (list.length > 60 ? `<div class="review-item ra">+ ${list.length-60} more — refine your search</div>` : '');
+
+    resultsEl.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => {
+      const id = el.dataset.toggle;
+      browseExpanded = (browseExpanded === id) ? null : id;
+      drawResults();
+    }));
+    resultsEl.querySelectorAll('[data-study]').forEach(el => el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const q = byId(el.dataset.study);
+      setStudyQueue([q]);
+      activeTab = 'study';
+      render();
+    }));
+  }
+  drawResults();
+}
+
+function readOrderedList(){
+  return readDirection === 'asc' ? DATA : [...DATA].slice().reverse();
+}
+
+function drawReadMode(root){
+  const body = document.getElementById('browse-body');
+  const list = readOrderedList();
+  if(readIdx < 0) readIdx = 0;
+  if(readIdx >= list.length) readIdx = list.length - 1;
+  const q = list[readIdx];
+  const c = classify(q.id);
+  const answerBody = q.type === 'text'
+    ? `<div style="font-size:14.5px;margin:10px 0;"><strong>Answer:</strong> ${escapeHtml(getCorrectText(q))}</div>`
+    : `<div style="margin:10px 0;">${q.options.map(o => optionHtml(q,o,[],true)).join('')}</div>`;
+
+  body.innerHTML = `
+    <div class="setup-row" style="margin-bottom:12px;">
+      <button data-dir="asc" class="${readDirection==='asc'?'active':''}">Q1 → Q${TOTAL}</button>
+      <button data-dir="desc" class="${readDirection==='desc'?'active':''}">Q${TOTAL} → Q1</button>
+    </div>
+    <div class="progress-bar" style="margin-bottom:12px;"><div class="progress-fill" style="width:${Math.round(((readIdx+1)/list.length)*100)}%"></div></div>
+    <div class="card">
+      <div class="qid"><span>${q.id.toUpperCase()} &middot; ${readIdx+1} / ${list.length}</span><span class="box-pill">${c}</span></div>
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${answerBody}
+      ${renderExplain(q)}
+      <div class="btnrow">
+        <button id="readPrev" ${readIdx===0?'disabled':''} style="flex:1;">← Previous</button>
+        <button class="primary" id="readNext" ${readIdx===list.length-1?'disabled':''} style="flex:1;">Next →</button>
+      </div>
+      <div class="btnrow">
+        <button id="readStudy" style="flex:1;">Study this question</button>
+      </div>
+    </div>
+  `;
+  root.querySelectorAll('[data-dir]').forEach(b => b.addEventListener('click', () => {
+    if(readDirection !== b.dataset.dir){ readDirection = b.dataset.dir; readIdx = 0; }
+    drawReadMode(root);
+  }));
+  document.getElementById('readPrev').addEventListener('click', () => { readIdx--; drawReadMode(root); });
+  document.getElementById('readNext').addEventListener('click', () => { readIdx++; drawReadMode(root); });
+  document.getElementById('readStudy').addEventListener('click', () => {
+    setStudyQueue([q]);
+    activeTab = 'study';
+    render();
+  });
+}
+
+// ---------- utils ----------
+
+function escapeHtml(s){
+  if(s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function truncate(s, n){ return s.length > n ? s.slice(0,n-1)+'…' : s; }
+
+// ---------- init ----------
+
+(async function init(){
+  document.getElementById('app').innerHTML = `<div class="empty">Loading your progress…</div>`;
+  // Absolute failsafe: no matter what goes wrong with storage, the app must become
+  // interactive within a bounded time rather than hang on the loading screen forever.
+  await withTimeout(loadBank(), 6000, null);
+  await withTimeout(loadSRS(), 10000, null);
+  render();
+})();
+</script>
+</body>
+</html>

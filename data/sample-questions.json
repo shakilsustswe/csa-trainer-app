@@ -1,0 +1,259 @@
+[
+  {
+    "id": "q1",
+    "type": "single",
+    "question": "Which table stores the user accounts on a ServiceNow instance?",
+    "options": [
+      {"id": "A", "text": "sys_user"},
+      {"id": "B", "text": "sys_user_group"},
+      {"id": "C", "text": "sys_db_object"},
+      {"id": "D", "text": "cmn_location"}
+    ],
+    "correct": ["A"],
+    "explanation": "User records live in sys_user. sys_user_group holds groups, sys_db_object holds table definitions, and cmn_location holds locations."
+  },
+  {
+    "id": "q2",
+    "type": "multi",
+    "question": "Which of these tables extend the Task [task] table? (Choose three.)",
+    "options": [
+      {"id": "A", "text": "Incident [incident]"},
+      {"id": "B", "text": "Problem [problem]"},
+      {"id": "C", "text": "Change Request [change_request]"},
+      {"id": "D", "text": "User [sys_user]"},
+      {"id": "E", "text": "Configuration Item [cmdb_ci]"}
+    ],
+    "correct": ["A", "B", "C"],
+    "explanation": "Incident, Problem and Change Request are all child tables of Task, so they inherit fields like Number, Assigned to and State. Users and CIs are not tasks."
+  },
+  {
+    "id": "q3",
+    "type": "single",
+    "question": "What is the base table of the CMDB that all configuration item classes extend?",
+    "options": [
+      {"id": "A", "text": "cmdb_rel_ci"},
+      {"id": "B", "text": "cmdb_ci"},
+      {"id": "C", "text": "alm_asset"},
+      {"id": "D", "text": "task_ci"}
+    ],
+    "correct": ["B"],
+    "explanation": "cmdb_ci is the root CI class. cmdb_rel_ci stores relationships between CIs, alm_asset is the asset table, and task_ci links tasks to affected CIs."
+  },
+  {
+    "id": "q4",
+    "type": "single",
+    "question": "A form field must become mandatory only when Category is \"Network\". What is the simplest no-code way to do this on the form?",
+    "options": [
+      {"id": "A", "text": "A before business rule"},
+      {"id": "B", "text": "A UI policy"},
+      {"id": "C", "text": "An access control (ACL)"},
+      {"id": "D", "text": "A scheduled job"}
+    ],
+    "correct": ["B"],
+    "explanation": "UI policies run in the browser and can make fields mandatory, read-only or hidden based on conditions, without scripting. Business rules run on the server, and ACLs control access, not form behavior."
+  },
+  {
+    "id": "q5",
+    "type": "single",
+    "question": "When does a \"before\" business rule run?",
+    "options": [
+      {"id": "A", "text": "Before the form is shown to the user"},
+      {"id": "B", "text": "After the record is saved, in the background"},
+      {"id": "C", "text": "After the user submits, but before the record is written to the database"},
+      {"id": "D", "text": "Only when a record is deleted"}
+    ],
+    "correct": ["C"],
+    "explanation": "Before business rules run on the server after a submit and before the database write, so they can change field values without an extra update. Async rules run in the background after the save."
+  },
+  {
+    "id": "q6",
+    "type": "multi",
+    "question": "Which of these are valid client script types? (Choose four.)",
+    "options": [
+      {"id": "A", "text": "onLoad"},
+      {"id": "B", "text": "onChange"},
+      {"id": "C", "text": "onSubmit"},
+      {"id": "D", "text": "onCellEdit"},
+      {"id": "E", "text": "onDelete"},
+      {"id": "F", "text": "onQuery"}
+    ],
+    "correct": ["A", "B", "C", "D"],
+    "explanation": "Client scripts can run on form load, on a field change, on form submit, or when a cell is edited in a list. There is no onDelete or onQuery client script type."
+  },
+  {
+    "id": "q7",
+    "type": "single",
+    "question": "What is the main purpose of an update set?",
+    "options": [
+      {"id": "A", "text": "To capture configuration changes so they can be moved to another instance"},
+      {"id": "B", "text": "To bulk-update field values on many records at once"},
+      {"id": "C", "text": "To schedule platform upgrades"},
+      {"id": "D", "text": "To back up all table data"}
+    ],
+    "correct": ["A"],
+    "explanation": "Update sets record customizations (like forms, scripts and policies) so you can move them from one instance to another, for example from development to test. They don't carry ordinary record data."
+  },
+  {
+    "id": "q8",
+    "type": "single",
+    "question": "In an import, what does a transform map do?",
+    "options": [
+      {"id": "A", "text": "Converts a spreadsheet into a PDF report"},
+      {"id": "B", "text": "Maps fields from the import set (staging) table to a target table"},
+      {"id": "C", "text": "Encrypts the imported data"},
+      {"id": "D", "text": "Schedules when the data source is read"}
+    ],
+    "correct": ["B"],
+    "explanation": "Data is first loaded into an import set (staging) table. The transform map then says which staging field goes into which target-table field, and can run scripts along the way."
+  },
+  {
+    "id": "q9",
+    "type": "single",
+    "question": "What does a reference field actually store in the database?",
+    "options": [
+      {"id": "A", "text": "The display value of the referenced record"},
+      {"id": "B", "text": "A copy of the whole referenced record"},
+      {"id": "C", "text": "The sys_id of the referenced record"},
+      {"id": "D", "text": "The table name only"}
+    ],
+    "correct": ["C"],
+    "explanation": "A reference field stores the 32-character sys_id of the record it points to. The form shows the record's display value, but the stored value is the sys_id."
+  },
+  {
+    "id": "q10",
+    "type": "single",
+    "question": "What does \"dot-walking\" let you do?",
+    "options": [
+      {"id": "A", "text": "Move between instances"},
+      {"id": "B", "text": "Use fields from a related record through a reference field"},
+      {"id": "C", "text": "Step through a script line by line"},
+      {"id": "D", "text": "Browse the application menus with the keyboard"}
+    ],
+    "correct": ["B"],
+    "explanation": "Dot-walking follows a reference field to reach fields on the referenced record, for example Caller > Department on an incident. It works in lists, filters, reports and scripts."
+  },
+  {
+    "id": "q11",
+    "type": "single",
+    "question": "Which Service Catalog item type lets users fill in a catalog-style form that creates a record on another table, such as an incident?",
+    "options": [
+      {"id": "A", "text": "Order guide"},
+      {"id": "B", "text": "Record producer"},
+      {"id": "C", "text": "Content item"},
+      {"id": "D", "text": "Catalog client script"}
+    ],
+    "correct": ["B"],
+    "explanation": "A record producer shows a friendly catalog form and creates a record on a target table. An order guide bundles several items, and a content item links to information rather than ordering anything."
+  },
+  {
+    "id": "q12",
+    "type": "single",
+    "question": "In the default knowledge article workflow, which state makes an article visible to readers?",
+    "options": [
+      {"id": "A", "text": "Draft"},
+      {"id": "B", "text": "Review"},
+      {"id": "C", "text": "Published"},
+      {"id": "D", "text": "Retired"}
+    ],
+    "correct": ["C"],
+    "explanation": "Articles go from Draft to Review to Published. Only Published articles are shown to readers, and Retired articles are taken out of view."
+  },
+  {
+    "id": "q13",
+    "type": "multi",
+    "question": "On an email notification, which of these can be chosen as \"When to send\"? (Choose two.)",
+    "options": [
+      {"id": "A", "text": "A record is inserted or updated"},
+      {"id": "B", "text": "An event is fired"},
+      {"id": "C", "text": "Every time a user logs in"},
+      {"id": "D", "text": "Every time a list is opened"}
+    ],
+    "correct": ["A", "B"],
+    "explanation": "Notifications can be sent when a record is inserted or updated on a table, or when a specific event is fired (they can also be triggered from a flow). Logins and opening lists are not notification triggers."
+  },
+  {
+    "id": "q14",
+    "type": "single",
+    "question": "Where are the properties of a field (type, max length, default value, reference table) defined?",
+    "options": [
+      {"id": "A", "text": "In the field's dictionary entry"},
+      {"id": "B", "text": "In the form layout"},
+      {"id": "C", "text": "In the list layout"},
+      {"id": "D", "text": "In the user's preferences"}
+    ],
+    "correct": ["A"],
+    "explanation": "Each field has a dictionary entry that defines its type, length, default, reference table and more. Form and list layouts only control where a field appears."
+  },
+  {
+    "id": "q15",
+    "type": "text",
+    "question": "Type the name of the system table that holds a record for every table on the instance.",
+    "answerText": "sys_db_object",
+    "explanation": "sys_db_object (Tables) stores one record per table, including its label, name and which table it extends. Field definitions are in sys_dictionary."
+  },
+  {
+    "id": "q16",
+    "type": "multi",
+    "question": "Which roles let a user impersonate other users? (Choose two.)",
+    "options": [
+      {"id": "A", "text": "admin"},
+      {"id": "B", "text": "impersonator"},
+      {"id": "C", "text": "itil"},
+      {"id": "D", "text": "knowledge"}
+    ],
+    "correct": ["A", "B"],
+    "explanation": "Admins can impersonate users, and so can users with the impersonator role. Impersonation is useful for testing what another user can see and do."
+  },
+  {
+    "id": "q17",
+    "type": "single",
+    "question": "In a list's filter breadcrumbs, what happens when you click one of the conditions?",
+    "options": [
+      {"id": "A", "text": "Only that condition is removed"},
+      {"id": "B", "text": "The conditions to the right of it are removed"},
+      {"id": "C", "text": "The whole filter is saved as a favorite"},
+      {"id": "D", "text": "The list is exported to Excel"}
+    ],
+    "correct": ["B"],
+    "explanation": "Clicking a breadcrumb keeps that condition and everything to its left, and drops the conditions after it. To remove just one condition, use the x next to it instead."
+  },
+  {
+    "id": "q18",
+    "type": "single",
+    "question": "What is a sys_id?",
+    "options": [
+      {"id": "A", "text": "The user's login name"},
+      {"id": "B", "text": "A unique 32-character identifier given to every record"},
+      {"id": "C", "text": "The number shown on tasks, like INC0010001"},
+      {"id": "D", "text": "The name of the instance"}
+    ],
+    "correct": ["B"],
+    "explanation": "Every record gets a globally unique 32-character hexadecimal sys_id. Task numbers like INC0010001 are human-friendly and separate from the sys_id."
+  },
+  {
+    "id": "q19",
+    "type": "single",
+    "question": "Which ServiceNow tool is used to build process automation with little or no code, using triggers, actions and flow logic?",
+    "options": [
+      {"id": "A", "text": "Flow Designer"},
+      {"id": "B", "text": "Form Designer"},
+      {"id": "C", "text": "Report Designer"},
+      {"id": "D", "text": "Schema Map"}
+    ],
+    "correct": ["A"],
+    "explanation": "Flow Designer builds automations from a trigger plus actions and logic. Form Designer arranges forms, and the Schema Map shows how tables relate."
+  },
+  {
+    "id": "q20",
+    "type": "single",
+    "question": "What defines the target time and conditions for responding to or resolving a task under a service level agreement?",
+    "options": [
+      {"id": "A", "text": "An SLA definition"},
+      {"id": "B", "text": "A business rule"},
+      {"id": "C", "text": "An assignment rule"},
+      {"id": "D", "text": "A UI action"}
+    ],
+    "correct": ["A"],
+    "explanation": "An SLA definition sets when an SLA starts, pauses and stops, and how long it allows. When a matching task is created, a Task SLA record is attached to track the timer."
+  }
+]
